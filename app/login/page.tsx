@@ -1,8 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import gsap from "gsap";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { FieldLabel, Input, PasswordInput } from "@/components/Field";
@@ -18,56 +17,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && user) {
       router.replace(user.role === "admin" ? "/admin" : "/dashboard");
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    if (loading || user || !pageRef.current) return;
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    const ctx = gsap.context(() => {
-      const brand = pageRef.current?.querySelector("[data-login-brand]");
-      const form = pageRef.current?.querySelector("[data-login-form]");
-      const foot = pageRef.current?.querySelector("[data-login-foot]");
-      const targets = [brand, form, foot].filter(
-        (el): el is Element => el != null
-      );
-      if (targets.length === 0) return;
-
-      if (reduced) {
-        gsap.set(targets, { opacity: 1, y: 0 });
-        return;
-      }
-
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
-      if (brand) {
-        tl.fromTo(brand, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 });
-      }
-      if (form) {
-        tl.fromTo(
-          form,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.5 },
-          "-=0.25"
-        );
-      }
-      if (foot) {
-        tl.fromTo(foot, { opacity: 0 }, { opacity: 1, duration: 0.4 }, "-=0.2");
-      }
-    }, pageRef);
-
-    return () => {
-      ctx.revert();
-    };
-    // Only when the session check finishes — not on login success (avoids reverting to opacity-0).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- user is read once loading is false
-  }, [loading]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -87,10 +42,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      ref={pageRef}
-      className="relative min-h-screen overflow-hidden bg-white text-mist"
-    >
+    <div className="relative min-h-screen overflow-hidden bg-white text-mist">
       <a
         href="#login-form"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-brand focus:px-4 focus:py-2 focus:text-white"
@@ -113,7 +65,7 @@ export default function LoginPage() {
       />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-14 sm:px-8">
-        <div data-login-brand className="opacity-0">
+        <div className="gms-enter">
           <BrandMark animate size="lg" surface="bare" />
           <p className="mt-5 text-center font-display text-[0.7rem] uppercase tracking-[0.28em] text-brand">
             GMS Contrôle
@@ -145,7 +97,7 @@ export default function LoginPage() {
           id="login-form"
           data-login-form
           onSubmit={onSubmit}
-          className="mt-10 opacity-0"
+          className="mt-10 gms-enter gms-enter-delay-1"
           noValidate
         >
           {error && (
@@ -199,7 +151,7 @@ export default function LoginPage() {
 
         <p
           data-login-foot
-          className="mt-12 text-center font-display text-[0.6rem] uppercase tracking-[0.28em] text-mute opacity-0"
+          className="mt-12 text-center font-display text-[0.6rem] uppercase tracking-[0.28em] text-mute gms-enter-fade gms-enter-delay-2"
         >
           Partner of your success since 2000
         </p>

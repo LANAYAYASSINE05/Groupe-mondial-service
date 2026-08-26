@@ -1,8 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
 
 type BrandMarkProps = {
   animate?: boolean;
@@ -30,65 +28,14 @@ export function BrandMark({
   productName = "GMS Contrôle",
   className = "",
 }: BrandMarkProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const { w, h } = SIZE[size];
 
-  useEffect(() => {
-    if (!animate || !rootRef.current) return;
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    const ctx = gsap.context(() => {
-      const logo = rootRef.current?.querySelector("[data-brand-logo]");
-      const lines = Array.from(
-        rootRef.current?.querySelectorAll("[data-brand-line]") ?? []
-      );
-      if (!logo && lines.length === 0) return;
-
-      if (reduced) {
-        if (logo) gsap.set(logo, { opacity: 1, y: 0, scale: 1 });
-        if (lines.length) gsap.set(lines, { opacity: 1, y: 0, scale: 1 });
-        return;
-      }
-
-      const tl = gsap.timeline();
-      if (logo) {
-        tl.fromTo(
-          logo,
-          { opacity: 0, scale: 0.96 },
-          { opacity: 1, scale: 1, duration: 0.55, ease: "power2.out" }
-        ).add(() => logo.classList.add("is-active"));
-      }
-      if (lines.length) {
-        tl.fromTo(
-          lines,
-          { opacity: 0, y: 10 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.35,
-            stagger: 0.1,
-            ease: "power2.out",
-          },
-          logo ? "-=0.15" : 0
-        );
-      }
-    }, rootRef);
-
-    return () => {
-      ctx.revert();
-    };
-  }, [animate]);
-
   return (
-    <div
-      ref={rootRef}
-      className={`flex flex-col items-center gap-4 ${className}`}
-    >
+    <div className={`flex flex-col items-center gap-4 ${className}`}>
       <div
         data-brand-logo
         className={`gms-logo-frame gms-logo-frame--${surface} metal-sweep ${
-          animate ? "opacity-0" : ""
+          animate ? "gms-brand-in is-active" : ""
         }`}
         style={
           {
@@ -109,18 +56,16 @@ export function BrandMark({
       {showProduct && (
         <div className="text-center">
           <p
-            data-brand-line
             className={`font-display text-[0.68rem] uppercase tracking-[0.28em] text-brand ${
-              animate ? "opacity-0" : ""
+              animate ? "gms-enter" : ""
             }`}
           >
             Application terrain
           </p>
           <p
-            data-brand-line
             className={`mt-1.5 font-display font-bold uppercase tracking-[0.04em] text-mist ${
               size === "hero" || size === "lg" ? "text-3xl sm:text-4xl" : "text-xl"
-            } ${animate ? "opacity-0" : ""}`}
+            } ${animate ? "gms-enter gms-enter-delay-1" : ""}`}
           >
             {productName}
           </p>
