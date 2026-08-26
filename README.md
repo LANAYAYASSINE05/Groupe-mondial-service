@@ -5,7 +5,7 @@ Frontend **autonome** pour présentation client : **aucun backend**, **aucune ba
 ## Déploiement Vercel
 
 1. Importer le dépôt sur [vercel.com](https://vercel.com)
-2. **Root Directory** : `vercel`
+2. **Root Directory** : `.` (laisser vide — le dépôt *est* l’app Next.js)
 3. Framework : Next.js (détecté automatiquement)
 4. Variable d'environnement (déjà dans `.env.production`) :
    ```
@@ -16,7 +16,6 @@ Frontend **autonome** pour présentation client : **aucun backend**, **aucune ba
 ## Développement local
 
 ```bash
-cd vercel
 copy .env.local.example .env.local
 npm install
 npm run dev
@@ -46,12 +45,11 @@ Les modifications (CRUD admin, planning) fonctionnent **en mémoire** et dispara
 ## Structure
 
 ```
-vercel/
-  app/              Pages Next.js
-  components/       UI
-  lib/
-    mock-api.ts     Routeur API mock
-    mock/           Données & store
-  public/brand/     Logo Mondial Service
-  vercel.json       Config déploiement
+app/              Pages Next.js
+components/       UI
+lib/
+  mock-api.ts     Routeur API mock
+  mock/           Données & store
+public/brand/     Logo Mondial Service
+vercel.json       Config déploiement
 ```
