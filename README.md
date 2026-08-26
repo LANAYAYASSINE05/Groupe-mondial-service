@@ -34,9 +34,9 @@ npm run dev
 
 ## Données mock
 
-- 6 établissements (Casablanca / Rabat)
-- 5 contrôles historiques
-- Planning hebdomadaire
+- 12 établissements (Casablanca, Rabat, Marrakech, Tanger)
+- 28 contrôles historiques (audits + passagers, GPS, anomalies)
+- Planning semaine en cours + semaine précédente
 - Rapports, cartographie, statistiques
 - Création de contrôles (session en cours)
 

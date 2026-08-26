@@ -24,8 +24,33 @@ const IDS = {
     "b0000000-0000-4000-8000-000000000004",
     "b0000000-0000-4000-8000-000000000005",
     "b0000000-0000-4000-8000-000000000006",
+    "b0000000-0000-4000-8000-000000000007",
+    "b0000000-0000-4000-8000-000000000008",
+    "b0000000-0000-4000-8000-000000000009",
+    "b0000000-0000-4000-8000-00000000000a",
+    "b0000000-0000-4000-8000-00000000000b",
+    "b0000000-0000-4000-8000-00000000000c",
   ],
 } as const;
+
+const NO_COMMENTS: Record<string, string> = {
+  tenue: "Tenue incomplète signalée au chef de poste.",
+  registres: "Registre incomplet sur la nuit précédente.",
+  gestion_badges: "Badge visiteur non restitué en fin de vacation.",
+  gestion_cles: "Clé du local technique non inventoriée.",
+  verification_cameras: "Caméra parking nord hors service.",
+  etat_telephone: "Batterie téléphone de poste défaillante.",
+  etat_talkie_walkie: "Talkie-walkie canal 2 inaudible.",
+  guerites: "Guérite entrée : propreté insuffisante.",
+  poste_garde: "Poste de garde : consignes non affichées.",
+  application_consignes: "Ronde 02h non tracée.",
+  qualite_prestation: "Accueil visiteur trop long (12 min).",
+  passager_identite: "Badge non présenté à l'entrée.",
+  passager_acces: "Tentative d'accès zone restreinte.",
+  passager_comportement: "Comportement non conforme en zone sécurisée.",
+  passager_consignes: "Consignes anti-COVID non respectées à l'accueil.",
+  passager_circulation: "Stationnement véhicule hors emplacement prévu.",
+};
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -43,6 +68,25 @@ function mondayOfWeek(d = new Date()) {
   return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
 }
 
+function shiftMonday(weekStart: string, weeks: number) {
+  const x = new Date(`${weekStart}T12:00:00`);
+  x.setDate(x.getDate() + weeks * 7);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+}
+
+function statesFor(
+  formType: FormType,
+  nos: string[] = [],
+  nas: string[] = []
+): ItemState[] {
+  return CHECKLISTS[formType].items.map((item) => {
+    if (nos.includes(item.key)) return "no";
+    if (nas.includes(item.key)) return "na";
+    return "ok";
+  });
+}
+
 function buildItems(
   formType: FormType,
   states: ItemState[],
@@ -54,7 +98,10 @@ function buildItems(
     itemKey: item.key,
     label: item.label,
     state: states[i] ?? "ok",
-    comment: states[i] === "no" ? "Écart constaté" : "",
+    comment:
+      states[i] === "no"
+        ? NO_COMMENTS[item.key] ?? "Écart constaté"
+        : "",
     position: i + 1,
   }));
 }
@@ -65,14 +112,17 @@ function makeControl(opts: {
   establishmentId: string;
   formType: FormType;
   explanation: string;
-  states: ItemState[];
+  nos?: string[];
+  nas?: string[];
   daysAgo: number;
-  gps?: { lat: number; lng: number };
+  gps?: boolean;
 }): Control {
-  const items = buildItems(opts.formType, opts.states, opts.id);
+  const states = statesFor(opts.formType, opts.nos, opts.nas);
+  const items = buildItems(opts.formType, states, opts.id);
   const anomaly = items.some((i) => i.state === "no");
   const site = initialEstablishments.find((e) => e.id === opts.establishmentId)!;
   const user = initialUsers.find((u) => u.id === opts.userId)!;
+  const jitter = Number.parseInt(opts.id.slice(-2), 16) || 1;
   return {
     id: opts.id,
     userId: opts.userId,
@@ -80,9 +130,9 @@ function makeControl(opts: {
     formType: opts.formType,
     explanation: opts.explanation,
     anomaly,
-    latitude: opts.gps?.lat ?? null,
-    longitude: opts.gps?.lng ?? null,
-    geoAccuracy: opts.gps ? 15 : null,
+    latitude: opts.gps && site.latitude != null ? site.latitude + (jitter % 7) * 0.0003 : null,
+    longitude: opts.gps && site.longitude != null ? site.longitude - (jitter % 5) * 0.0002 : null,
+    geoAccuracy: opts.gps ? 10 + (jitter % 18) : null,
     geoVerified: !!opts.gps,
     createdAt: daysAgo(opts.daysAgo),
     establishment: site,
@@ -91,53 +141,8 @@ function makeControl(opts: {
   };
 }
 
-export const initialUsers: User[] = [
-  {
-    id: IDS.admin,
-    name: "Admin GMS",
-    email: "admin@groupeservice.local",
-    role: "admin",
-    active: true,
-    createdAt: daysAgo(120),
-    establishments: [],
-  },
-  {
-    id: IDS.amine,
-    name: "Amine Benali",
-    email: "amine@groupeservice.local",
-    role: "controleur",
-    active: true,
-    createdAt: daysAgo(90),
-    establishments: [
-      { id: IDS.sites[0], name: "Tour Horizon" },
-      { id: IDS.sites[1], name: "Entrepôt Nord" },
-    ],
-  },
-  {
-    id: IDS.sara,
-    name: "Sara Dupont",
-    email: "sara@groupeservice.local",
-    role: "controleur",
-    active: true,
-    createdAt: daysAgo(60),
-    establishments: [
-      { id: IDS.sites[2], name: "Siège Groupe Service" },
-      { id: IDS.sites[3], name: "Clinique Atlas" },
-    ],
-  },
-  {
-    id: IDS.karim,
-    name: "Karim Traoré",
-    email: "karim@groupeservice.local",
-    role: "controleur",
-    active: true,
-    createdAt: daysAgo(45),
-    establishments: [
-      { id: IDS.sites[4], name: "Centre commercial Marina" },
-      { id: IDS.sites[5], name: "Site non visité (démo)" },
-    ],
-  },
-];
+const NA_CHIENS = ["calendrier_vaccinations_chiens", "etat_niche"];
+const NA_CHIENS_RONDE = [...NA_CHIENS, "horaire_ronde"];
 
 export const initialEstablishments: Establishment[] = [
   {
@@ -193,98 +198,456 @@ export const initialEstablishments: Establishment[] = [
   {
     id: IDS.sites[5],
     name: "Site non visité (démo)",
-    address: "Quartier Oasis",
+    address: "Quartier Oasis, Casablanca",
     latitude: 33.5568,
     longitude: -7.6745,
     geoRadiusMeters: 800,
     active: true,
     createdAt: daysAgo(200),
   },
+  {
+    id: IDS.sites[6],
+    name: "Aéroport Mohammed V",
+    address: "Nouaceur, Casablanca",
+    latitude: 33.3675,
+    longitude: -7.5898,
+    geoRadiusMeters: 1200,
+    active: true,
+    createdAt: daysAgo(180),
+  },
+  {
+    id: IDS.sites[7],
+    name: "Port de Casablanca",
+    address: "Boulevard des Almohades, Casablanca",
+    latitude: 33.6051,
+    longitude: -7.6133,
+    geoRadiusMeters: 1000,
+    active: true,
+    createdAt: daysAgo(180),
+  },
+  {
+    id: IDS.sites[8],
+    name: "Université Hassan II",
+    address: "Route d'El Jadida, Casablanca",
+    latitude: 33.5412,
+    longitude: -7.6774,
+    geoRadiusMeters: 900,
+    active: true,
+    createdAt: daysAgo(160),
+  },
+  {
+    id: IDS.sites[9],
+    name: "Hôtel Atlas Gueliz",
+    address: "Avenue Mohammed V, Marrakech",
+    latitude: 31.634,
+    longitude: -8.0002,
+    geoRadiusMeters: 600,
+    active: true,
+    createdAt: daysAgo(150),
+  },
+  {
+    id: IDS.sites[10],
+    name: "Zone franche Tanger Med",
+    address: "Ksar Sghir, Tanger",
+    latitude: 35.8902,
+    longitude: -5.5046,
+    geoRadiusMeters: 1500,
+    active: true,
+    createdAt: daysAgo(140),
+  },
+  {
+    id: IDS.sites[11],
+    name: "Usine Bouskoura",
+    address: "Parc industriel Bouskoura",
+    latitude: 33.4489,
+    longitude: -7.6491,
+    geoRadiusMeters: 800,
+    active: true,
+    createdAt: daysAgo(130),
+  },
 ];
 
-const auditOk = Array<ItemState>(22).fill("ok");
-const auditAnomaly: ItemState[] = [
-  "ok", "no", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok",
-  "na", "na", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok",
+export const initialUsers: User[] = [
+  {
+    id: IDS.admin,
+    name: "Admin GMS",
+    email: "admin@groupeservice.local",
+    role: "admin",
+    active: true,
+    createdAt: daysAgo(120),
+    establishments: [],
+  },
+  {
+    id: IDS.amine,
+    name: "Amine Benali",
+    email: "amine@groupeservice.local",
+    role: "controleur",
+    active: true,
+    createdAt: daysAgo(90),
+    establishments: [
+      { id: IDS.sites[0], name: "Tour Horizon" },
+      { id: IDS.sites[1], name: "Entrepôt Nord" },
+      { id: IDS.sites[6], name: "Aéroport Mohammed V" },
+      { id: IDS.sites[7], name: "Port de Casablanca" },
+    ],
+  },
+  {
+    id: IDS.sara,
+    name: "Sara Dupont",
+    email: "sara@groupeservice.local",
+    role: "controleur",
+    active: true,
+    createdAt: daysAgo(60),
+    establishments: [
+      { id: IDS.sites[2], name: "Siège Groupe Service" },
+      { id: IDS.sites[3], name: "Clinique Atlas" },
+      { id: IDS.sites[8], name: "Université Hassan II" },
+      { id: IDS.sites[9], name: "Hôtel Atlas Gueliz" },
+    ],
+  },
+  {
+    id: IDS.karim,
+    name: "Karim Traoré",
+    email: "karim@groupeservice.local",
+    role: "controleur",
+    active: true,
+    createdAt: daysAgo(45),
+    establishments: [
+      { id: IDS.sites[4], name: "Centre commercial Marina" },
+      { id: IDS.sites[5], name: "Site non visité (démo)" },
+      { id: IDS.sites[10], name: "Zone franche Tanger Med" },
+      { id: IDS.sites[11], name: "Usine Bouskoura" },
+    ],
+  },
 ];
 
+function cid(n: number) {
+  return `c0000000-0000-4000-8000-0000000000${n.toString(16).padStart(2, "0")}`;
+}
+
+/** Seed backend + historique étendu (stats, carte, rapports). */
 export const initialControls: Control[] = [
+  // — Seed Prisma (mêmes écarts / explications)
   makeControl({
-    id: "c0000000-0000-4000-8000-000000000001",
+    id: cid(1),
     userId: IDS.amine,
     establishmentId: IDS.sites[0],
     formType: "audit",
     explanation: "Ronde conforme dans l'ensemble.",
-    states: auditOk,
+    nas: ["calendrier_vaccinations_chiens"],
     daysAgo: 1,
-    gps: { lat: 33.5895, lng: -7.603 },
+    gps: true,
   }),
   makeControl({
-    id: "c0000000-0000-4000-8000-000000000002",
+    id: cid(2),
     userId: IDS.amine,
     establishmentId: IDS.sites[1],
     formType: "audit",
     explanation: "Tenue incomplète signalée au chef de poste.",
-    states: auditAnomaly,
+    nos: ["tenue"],
+    nas: NA_CHIENS_RONDE,
     daysAgo: 2,
-    gps: { lat: 33.613, lng: -7.516 },
+    gps: true,
   }),
   makeControl({
-    id: "c0000000-0000-4000-8000-000000000003",
+    id: cid(3),
     userId: IDS.sara,
     establishmentId: IDS.sites[2],
     formType: "passager",
-    explanation: "Passage conforme.",
-    states: ["ok", "ok", "ok", "ok", "ok", "ok", "ok"],
+    explanation: "Contrôle d'accès OK.",
     daysAgo: 3,
-    gps: { lat: 33.592, lng: -7.632 },
+    gps: true,
   }),
   makeControl({
-    id: "c0000000-0000-4000-8000-000000000004",
+    id: cid(4),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[3],
+    formType: "passager",
+    explanation: "Badge non présenté à l'entrée.",
+    nos: ["passager_identite"],
+    nas: ["passager_epi"],
+    daysAgo: 4,
+  }),
+  makeControl({
+    id: cid(5),
     userId: IDS.karim,
     establishmentId: IDS.sites[4],
-    formType: "passager",
-    explanation: "Accès zone restreinte — badge vérifié.",
-    states: ["ok", "ok", "no", "ok", "ok", "ok", "ok"],
+    formType: "audit",
+    explanation: "Registre incomplet sur la nuit précédente.",
+    nos: ["registres"],
+    nas: NA_CHIENS,
     daysAgo: 5,
-    gps: { lat: 33.604, lng: -7.62 },
+    gps: true,
+  }),
+  // — Semaine en cours / récente
+  makeControl({
+    id: cid(6),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[6],
+    formType: "audit",
+    explanation: "Aéroport : ronde T1 conforme, caméra parking à surveiller.",
+    nos: ["verification_cameras"],
+    nas: NA_CHIENS,
+    daysAgo: 0,
+    gps: true,
   }),
   makeControl({
-    id: "c0000000-0000-4000-8000-000000000005",
+    id: cid(7),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[7],
+    formType: "passager",
+    explanation: "Port : accès quai 3 conforme.",
+    daysAgo: 1,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(8),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[8],
+    formType: "audit",
+    explanation: "Campus : consigne ronde 02h non tracée.",
+    nos: ["application_consignes"],
+    nas: NA_CHIENS,
+    daysAgo: 6,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(9),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[9],
+    formType: "passager",
+    explanation: "Hôtel : passage lobby conforme.",
+    daysAgo: 7,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(10),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[10],
+    formType: "audit",
+    explanation: "Tanger Med : prestation accueil à améliorer.",
+    nos: ["qualite_prestation"],
+    nas: NA_CHIENS,
+    daysAgo: 8,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(11),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[11],
+    formType: "passager",
+    explanation: "Usine : zone circulation non respectée.",
+    nos: ["passager_circulation"],
+    daysAgo: 9,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(12),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[0],
+    formType: "passager",
+    explanation: "Tour Horizon : visiteur hors zone autorisée.",
+    nos: ["passager_acces"],
+    daysAgo: 10,
+    gps: true,
+  }),
+  // — Mois précédent
+  makeControl({
+    id: cid(13),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[1],
+    formType: "audit",
+    explanation: "Entrepôt : gestion des clés à revoir.",
+    nos: ["gestion_cles"],
+    nas: NA_CHIENS,
+    daysAgo: 14,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(14),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[2],
+    formType: "audit",
+    explanation: "Siège : contrôle mensuel conforme.",
+    nas: NA_CHIENS,
+    daysAgo: 16,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(15),
     userId: IDS.sara,
     establishmentId: IDS.sites[3],
     formType: "audit",
-    explanation: "Contrôle mensuel clinique.",
-    states: auditOk,
-    daysAgo: 8,
+    explanation: "Clinique : poste de garde — consignes non affichées.",
+    nos: ["poste_garde"],
+    nas: NA_CHIENS,
+    daysAgo: 18,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(16),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[4],
+    formType: "passager",
+    explanation: "Marina : passage conforme.",
+    daysAgo: 19,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(17),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[6],
+    formType: "passager",
+    explanation: "Aéroport : identité / badge OK.",
+    daysAgo: 21,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(18),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[11],
+    formType: "audit",
+    explanation: "Usine : téléphone de poste HS.",
+    nos: ["etat_telephone"],
+    nas: NA_CHIENS,
+    daysAgo: 23,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(19),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[8],
+    formType: "passager",
+    explanation: "Université : comportement non conforme.",
+    nos: ["passager_comportement"],
+    daysAgo: 25,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(20),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[7],
+    formType: "audit",
+    explanation: "Port : badges visiteurs non restitués.",
+    nos: ["gestion_badges"],
+    nas: NA_CHIENS_RONDE,
+    daysAgo: 28,
+    gps: true,
+  }),
+  // — Mois -2
+  makeControl({
+    id: cid(21),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[9],
+    formType: "audit",
+    explanation: "Marrakech : guérite entrée à nettoyer.",
+    nos: ["guerites"],
+    nas: NA_CHIENS,
+    daysAgo: 35,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(22),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[10],
+    formType: "passager",
+    explanation: "Tanger Med : consignes non respectées à l'accueil.",
+    nos: ["passager_consignes"],
+    nas: ["passager_epi"],
+    daysAgo: 38,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(23),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[0],
+    formType: "audit",
+    explanation: "Tour Horizon : contrôle mensuel conforme.",
+    nas: NA_CHIENS,
+    daysAgo: 42,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(24),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[2],
+    formType: "passager",
+    explanation: "Siège : passage conforme.",
+    daysAgo: 45,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(25),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[4],
+    formType: "audit",
+    explanation: "Marina : talkie-walkie défaillant.",
+    nos: ["etat_talkie_walkie"],
+    nas: NA_CHIENS,
+    daysAgo: 48,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(26),
+    userId: IDS.amine,
+    establishmentId: IDS.sites[1],
+    formType: "passager",
+    explanation: "Entrepôt Nord : accès conforme.",
+    daysAgo: 52,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(27),
+    userId: IDS.sara,
+    establishmentId: IDS.sites[3],
+    formType: "audit",
+    explanation: "Clinique : contrôle mensuel conforme.",
+    nas: NA_CHIENS,
+    daysAgo: 56,
+    gps: true,
+  }),
+  makeControl({
+    id: cid(28),
+    userId: IDS.karim,
+    establishmentId: IDS.sites[11],
+    formType: "passager",
+    explanation: "Usine Bouskoura : passage conforme.",
+    daysAgo: 60,
+    gps: true,
   }),
 ];
 
 function buildInitialPlans(): PlannedControl[] {
-  const weekStart = mondayOfWeek();
-  const ws = new Date(`${weekStart}T08:00:00`);
-  const day = (offset: number, hour: number) => {
-    const d = new Date(ws);
+  const thisWeek = mondayOfWeek();
+  const lastWeek = shiftMonday(thisWeek, -1);
+  const day = (weekStart: string, offset: number, hour: number) => {
+    const d = new Date(`${weekStart}T00:00:00`);
     d.setDate(d.getDate() + offset);
     d.setHours(hour, 0, 0, 0);
     return d;
   };
   const mk = (
-    id: string,
+    n: number,
     siteIdx: number,
+    weekStart: string,
     dayOffset: number,
     status: PlanStatus,
-    assigneeIds: string[]
+    assigneeIds: string[],
+    notes: string,
+    controlId?: string | null
   ): PlannedControl => {
-    const from = day(dayOffset, 9);
-    const until = day(dayOffset, 11);
+    const from = day(weekStart, dayOffset, 9);
+    const until = day(weekStart, dayOffset, 12);
     const site = initialEstablishments[siteIdx];
     const assignees = assigneeIds.map((uid) => {
       const u = initialUsers.find((x) => x.id === uid)!;
       return { id: u.id, name: u.name, email: u.email };
     });
+    const linked = controlId
+      ? initialControls.find((c) => c.id === controlId)
+      : undefined;
     return {
-      id,
+      id: `p0000000-0000-4000-8000-0000000000${n.toString(16).padStart(2, "0")}`,
       establishmentId: site.id,
       clientName: "Mondial Service",
       weekStart,
@@ -293,30 +656,45 @@ function buildInitialPlans(): PlannedControl[] {
       dayIndex: dayOffset,
       dayLabel: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"][dayOffset],
       status,
-      notes: "",
-      controlId: status === "termine" ? initialControls[0]?.id ?? null : null,
-      createdAt: daysAgo(3),
+      notes,
+      controlId: linked?.id ?? null,
+      createdAt: daysAgo(10),
       updatedAt: daysAgo(1),
       establishment: { id: site.id, name: site.name, address: site.address },
       assignees,
-      control:
-        status === "termine" && initialControls[0]
-          ? {
-              id: initialControls[0].id,
-              formType: initialControls[0].formType,
-              anomaly: initialControls[0].anomaly,
-              createdAt: initialControls[0].createdAt,
-              userName: initialUsers.find((u) => u.id === IDS.amine)!.name,
-            }
-          : null,
+      control: linked
+        ? {
+            id: linked.id,
+            formType: linked.formType,
+            anomaly: linked.anomaly,
+            createdAt: linked.createdAt,
+            userName:
+              initialUsers.find((u) => u.id === linked.userId)?.name ?? "—",
+          }
+        : null,
     };
   };
 
   return [
-    mk("p0000000-0000-4000-8000-000000000001", 0, 0, "termine", [IDS.amine]),
-    mk("p0000000-0000-4000-8000-000000000002", 1, 1, "planifie", [IDS.amine]),
-    mk("p0000000-0000-4000-8000-000000000003", 2, 2, "en_cours", [IDS.sara]),
-    mk("p0000000-0000-4000-8000-000000000004", 4, 3, "planifie", [IDS.karim]),
+    // Semaine en cours — tous les sites actifs sauf le site jamais visité
+    mk(1, 0, thisWeek, 0, "termine", [IDS.amine], "Ronde matin T1", cid(1)),
+    mk(2, 1, thisWeek, 1, "planifie", [IDS.amine], "Audit entrepôt"),
+    mk(3, 2, thisWeek, 2, "en_cours", [IDS.sara], "Siège — en cours"),
+    mk(4, 3, thisWeek, 3, "planifie", [IDS.sara], "Clinique Atlas"),
+    mk(5, 4, thisWeek, 4, "planifie", [IDS.karim], "Marina — après-midi"),
+    mk(6, 6, thisWeek, 5, "planifie", [IDS.amine], "Aéroport T1/T2"),
+    mk(7, 7, thisWeek, 0, "termine", [IDS.amine], "Port — quai 3", cid(7)),
+    mk(8, 8, thisWeek, 1, "non_effectue", [IDS.sara], "Campus reporté"),
+    mk(9, 9, thisWeek, 4, "planifie", [IDS.sara], "Hôtel Gueliz"),
+    mk(10, 10, thisWeek, 3, "planifie", [IDS.karim], "Tanger Med"),
+    mk(11, 11, thisWeek, 2, "en_cours", [IDS.karim], "Usine Bouskoura"),
+    // Semaine précédente — réalisés
+    mk(12, 0, lastWeek, 0, "termine", [IDS.amine], "Hebdo Tour Horizon", cid(23)),
+    mk(13, 2, lastWeek, 2, "termine", [IDS.sara], "Hebdo siège", cid(14)),
+    mk(14, 4, lastWeek, 4, "termine", [IDS.karim], "Hebdo Marina", cid(16)),
+    mk(15, 1, lastWeek, 1, "termine", [IDS.amine], "Entrepôt Nord", cid(13)),
+    mk(16, 3, lastWeek, 3, "termine", [IDS.sara], "Clinique", cid(15)),
+    mk(17, 11, lastWeek, 5, "non_effectue", [IDS.karim], "Usine — agent absent"),
   ];
 }
 
@@ -337,10 +715,16 @@ export function createStore(): MockStore {
     userEstablishments: [
       { userId: IDS.amine, establishmentId: IDS.sites[0] },
       { userId: IDS.amine, establishmentId: IDS.sites[1] },
+      { userId: IDS.amine, establishmentId: IDS.sites[6] },
+      { userId: IDS.amine, establishmentId: IDS.sites[7] },
       { userId: IDS.sara, establishmentId: IDS.sites[2] },
       { userId: IDS.sara, establishmentId: IDS.sites[3] },
+      { userId: IDS.sara, establishmentId: IDS.sites[8] },
+      { userId: IDS.sara, establishmentId: IDS.sites[9] },
       { userId: IDS.karim, establishmentId: IDS.sites[4] },
       { userId: IDS.karim, establishmentId: IDS.sites[5] },
+      { userId: IDS.karim, establishmentId: IDS.sites[10] },
+      { userId: IDS.karim, establishmentId: IDS.sites[11] },
     ],
   };
 }
