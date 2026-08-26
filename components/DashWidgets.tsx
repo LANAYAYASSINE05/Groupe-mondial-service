@@ -7,17 +7,28 @@ export function KpiTile({
   label: string;
   value: string | number;
   hint?: string;
-  tone?: "default" | "alert" | "ok";
+  tone?: "default" | "alert" | "ok" | "audit" | "passager";
 }) {
   const valueClass =
     tone === "alert"
       ? "text-brand-light"
       : tone === "ok"
         ? "text-ok"
-        : "text-mist";
+        : tone === "audit"
+          ? "text-audit"
+          : tone === "passager"
+            ? "text-passager"
+            : "text-mist";
+
+  const barClass =
+    tone === "passager"
+      ? "border-l-passager"
+      : tone === "audit"
+        ? "border-l-audit"
+        : "border-l-brand";
 
   return (
-    <div className="border border-line/80 border-l-2 border-l-brand bg-surface/60 px-3 py-3 sm:px-4 sm:py-3.5">
+    <div className={`border border-line/80 border-l-2 ${barClass} bg-surface/60 px-3 py-3 sm:px-4 sm:py-3.5`}>
       <p className="font-display text-[0.58rem] uppercase tracking-[0.14em] text-mute">
         {label}
       </p>

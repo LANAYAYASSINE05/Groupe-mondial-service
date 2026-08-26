@@ -13,6 +13,9 @@ const OPTIONS: {
   icon: typeof IconShield;
   points: number;
   description: string;
+  selectedClass: string;
+  iconSelectedClass: string;
+  accentClass: string;
 }[] = [
   {
     value: "audit",
@@ -20,6 +23,10 @@ const OPTIONS: {
     points: 22,
     description:
       "Contrôle complet du site — chaque point en Conforme ou Non conforme, avec explication.",
+    selectedClass:
+      "border-audit bg-audit/8 shadow-[inset_3px_0_0_0_#8D2A26]",
+    iconSelectedClass: "border-audit bg-audit text-white",
+    accentClass: "text-audit",
   },
   {
     value: "passager",
@@ -27,6 +34,10 @@ const OPTIONS: {
     points: 7,
     description:
       "Contrôle allégé — 7 points obligatoires + explication en fin de visite.",
+    selectedClass:
+      "border-passager bg-passager/8 shadow-[inset_3px_0_0_0_#1A6F9A]",
+    iconSelectedClass: "border-passager bg-passager text-white",
+    accentClass: "text-passager",
   },
 ];
 
@@ -64,14 +75,23 @@ export default function NewControlChoicePage() {
               aria-label="Type de contrôle"
               className="grid gap-4 sm:grid-cols-2"
             >
-              {OPTIONS.map(({ value, icon: Icon, points, description }) => {
+              {OPTIONS.map(
+                ({
+                  value,
+                  icon: Icon,
+                  points,
+                  description,
+                  selectedClass,
+                  iconSelectedClass,
+                  accentClass,
+                }) => {
                 const selected = formType === value;
                 return (
                   <label
                     key={value}
                     className={`group relative flex cursor-pointer flex-col border p-6 transition duration-brand ${
                       selected
-                        ? "border-brand bg-brand/8 shadow-[inset_3px_0_0_0_#D13A34]"
+                        ? selectedClass
                         : "border-line bg-white hover:border-brand/35 hover:bg-surface/40"
                     }`}
                   >
@@ -87,15 +107,15 @@ export default function NewControlChoicePage() {
                       <span
                         className={`flex h-11 w-11 items-center justify-center border ${
                           selected
-                            ? "border-brand bg-brand text-white"
-                            : "border-line bg-surface text-brand"
+                            ? iconSelectedClass
+                            : "border-line bg-surface text-mist"
                         }`}
                       >
                         <Icon className="h-5 w-5" />
                       </span>
                       <span
                         className={`font-display text-[0.62rem] uppercase tracking-[0.14em] ${
-                          selected ? "text-brand-dark" : "text-mute"
+                          selected ? accentClass : "text-mute"
                         }`}
                       >
                         {points} points
@@ -103,7 +123,7 @@ export default function NewControlChoicePage() {
                     </div>
                     <p
                       className={`mt-5 font-display text-lg font-semibold ${
-                        selected ? "text-brand-dark" : "text-mist"
+                        selected ? accentClass : "text-mist"
                       }`}
                     >
                       {formTypeLabel(value)}
@@ -113,14 +133,14 @@ export default function NewControlChoicePage() {
                     </p>
                     <span
                       className={`mt-5 inline-flex items-center gap-2 font-display text-[0.65rem] uppercase tracking-[0.12em] ${
-                        selected ? "text-brand" : "text-na group-hover:text-mute"
+                        selected ? accentClass : "text-na group-hover:text-mute"
                       }`}
                       aria-hidden
                     >
                       <span
                         className={`h-2 w-2 rounded-full border ${
                           selected
-                            ? "border-brand bg-brand"
+                            ? `${value === "audit" ? "border-audit bg-audit" : "border-passager bg-passager"}`
                             : "border-line bg-white"
                         }`}
                       />
@@ -128,7 +148,8 @@ export default function NewControlChoicePage() {
                     </span>
                   </label>
                 );
-              })}
+              }
+              )}
             </div>
           </fieldset>
 

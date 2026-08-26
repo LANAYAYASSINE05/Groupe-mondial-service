@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
   ApiError,
   formatDate,
-  formTypeLabel,
   type Control,
 } from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
@@ -62,8 +62,8 @@ export default function StatsPage() {
             <KpiTile label="Total" value={stats.total} />
             <KpiTile label="Anomalies" value={stats.anomalies} tone="alert" />
             <KpiTile label="Taux anomalie" value={`${rate} %`} />
-            <KpiTile label="Audits" value={stats.audit} />
-            <KpiTile label="Passagers" value={stats.passager} />
+            <KpiTile label="Audits" value={stats.audit} tone="audit" />
+            <KpiTile label="Passagers" value={stats.passager} tone="passager" />
           </div>
 
           <div className="mt-6">
@@ -87,8 +87,8 @@ export default function StatsPage() {
                       <td className="px-4 py-3.5 text-mist">
                         {c.establishment?.name}
                       </td>
-                      <td className="px-4 py-3.5 text-mute">
-                        {formTypeLabel(c.formType)}
+                      <td className="px-4 py-3.5">
+                        <FormTypeBadge formType={c.formType} />
                       </td>
                       <td className="px-4 py-3.5">
                         <StatusBadge tone={c.anomaly ? "alert" : "ok"}>

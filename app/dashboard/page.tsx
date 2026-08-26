@@ -13,11 +13,11 @@ import {
   IconPlus,
   IconUser,
 } from "@/components/Icons";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
   formatDate,
-  formTypeLabel,
   type Control,
 } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
@@ -65,7 +65,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiTile label="Contrôles" value={stats?.total ?? "—"} />
         <KpiTile
           label="Anomalies"
@@ -73,11 +73,11 @@ export default function DashboardPage() {
           tone="alert"
         />
         <KpiTile label="Conformes" value={stats ? conformes : "—"} tone="ok" />
+        <KpiTile label="Audits" value={stats?.audit ?? "—"} tone="audit" />
         <KpiTile
-          label="Audit / Passager"
-          value={
-            stats ? `${stats.audit} / ${stats.passager}` : "—"
-          }
+          label="Passagers"
+          value={stats?.passager ?? "—"}
+          tone="passager"
         />
       </div>
 
@@ -112,8 +112,8 @@ export default function DashboardPage() {
                   <td className="px-4 py-3.5 text-mist">
                     {c.establishment?.name ?? "—"}
                   </td>
-                  <td className="px-4 py-3.5 text-mute">
-                    {formTypeLabel(c.formType)}
+                  <td className="px-4 py-3.5">
+                    <FormTypeBadge formType={c.formType} />
                   </td>
                   <td className="px-4 py-3.5">
                     <StatusBadge tone={c.anomaly ? "alert" : "ok"}>

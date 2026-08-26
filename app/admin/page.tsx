@@ -20,7 +20,8 @@ import {
   IconUsers,
   IconClipboard,
 } from "@/components/Icons";
-import { api, ApiError, formatDate, formTypeLabel, type Control } from "@/lib/api-client";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
+import { api, ApiError, formatDate, type Control } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast";
 
@@ -176,12 +177,12 @@ export default function AdminDashboardPage() {
   }, [kpis, summaries]);
 
   const auditBars = useMemo(
-    () => formTypeBars(summaries?.byFormType.audit, "gold"),
+    () => formTypeBars(summaries?.byFormType.audit, "audit"),
     [summaries]
   );
 
   const passagerBars = useMemo(
-    () => formTypeBars(summaries?.byFormType.passager, "default"),
+    () => formTypeBars(summaries?.byFormType.passager, "passager"),
     [summaries]
   );
 
@@ -226,8 +227,8 @@ export default function AdminDashboardPage() {
           value={kpis?.anomalies ?? "—"}
           tone="alert"
         />
-        <KpiTile label="Audits" value={kpis?.audit ?? "—"} />
-        <KpiTile label="Passagers" value={kpis?.passager ?? "—"} />
+        <KpiTile label="Audits" value={kpis?.audit ?? "—"} tone="audit" />
+        <KpiTile label="Passagers" value={kpis?.passager ?? "—"} tone="passager" />
         <KpiTile
           label="Avec GPS"
           value={
@@ -339,8 +340,8 @@ export default function AdminDashboardPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-mute">{c.user?.name}</td>
-                  <td className="px-4 py-3 text-mute">
-                    {formTypeLabel(c.formType)}
+                  <td className="px-4 py-3">
+                    <FormTypeBadge formType={c.formType} />
                   </td>
                   <td className="px-4 py-3">
                     {c.latitude != null && c.longitude != null ? (

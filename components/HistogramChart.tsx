@@ -4,13 +4,14 @@ export type HistogramBar = {
   label: string;
   value: number;
   secondary?: number;
-  tone?: "default" | "alert" | "ok" | "gold";
+  tone?: "default" | "alert" | "ok" | "gold" | "audit" | "passager";
 };
 
 function toneClass(tone: HistogramBar["tone"]) {
   if (tone === "alert") return "bg-brand";
   if (tone === "ok") return "bg-ok";
-  if (tone === "gold") return "bg-gold";
+  if (tone === "gold" || tone === "audit") return "bg-audit";
+  if (tone === "passager") return "bg-passager";
   return "bg-brand-light";
 }
 
@@ -44,7 +45,15 @@ export function HistogramChart({
     <div className="px-3 py-3 sm:px-4 sm:py-4">
       <div className="mb-2.5 flex flex-wrap gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-md border border-line/60 bg-surface/50 px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.1em] text-mute">
-          <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-light" />
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-sm ${
+              data[0]?.tone === "passager"
+                ? "bg-passager"
+                : data[0]?.tone === "ok"
+                  ? "bg-ok"
+                  : "bg-audit"
+            }`}
+          />
           {valueLabel}
         </span>
         {secondaryLabel ? (

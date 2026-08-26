@@ -399,8 +399,8 @@ export default function AdminReportsPage() {
               value={report.kpis.anomalies}
               tone="alert"
             />
-            <KpiTile label="Audits" value={report.kpis.audit} />
-            <KpiTile label="Passagers" value={report.kpis.passager} />
+        <KpiTile label="Audits" value={report.kpis.audit} tone="audit" />
+            <KpiTile label="Passagers" value={report.kpis.passager} tone="passager" />
           </div>
 
           {report.kpis.unvisitedSites.length > 0 && (

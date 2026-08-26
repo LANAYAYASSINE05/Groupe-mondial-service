@@ -6,12 +6,12 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { Select } from "@/components/Field";
 import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
   ApiError,
   formatDate,
-  formTypeLabel,
   type Control,
   type FormType,
 } from "@/lib/api-client";
@@ -102,8 +102,8 @@ export default function MyControlsPage() {
                 <td className="px-4 py-3.5 text-mist">
                   {c.establishment?.name ?? "—"}
                 </td>
-                <td className="px-4 py-3.5 text-mute">
-                  {formTypeLabel(c.formType)}
+                <td className="px-4 py-3.5">
+                  <FormTypeBadge formType={c.formType} />
                 </td>
                 <td className="px-4 py-3.5">
                   <StatusBadge tone={c.anomaly ? "alert" : "ok"}>

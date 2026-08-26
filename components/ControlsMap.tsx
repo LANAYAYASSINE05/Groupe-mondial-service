@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { LayerGroup, Map } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FormType } from "@/lib/api-client";
-import { formTypeLabel } from "@/lib/api-client";
+import { FORM_TYPE_HEX, formTypeLabel } from "@/lib/api-client";
 
 export type MapSite = {
   id: string;
@@ -97,13 +97,14 @@ export function ControlsMap({
       }
 
       for (const c of visibleControls) {
-        const color = c.anomaly ? "#D13A34" : c.formType === "audit" ? "#8D2A26" : "#6b8cae";
+        const fill = FORM_TYPE_HEX[c.formType];
+        const color = c.anomaly ? "#D13A34" : fill;
         L.circleMarker([c.latitude, c.longitude], {
           radius: c.hasGps ? 8 : 5,
           color,
-          fillColor: color,
+          fillColor: fill,
           fillOpacity: c.hasGps ? 0.95 : 0.45,
-          weight: 2,
+          weight: c.anomaly ? 3 : 2,
         })
           .bindPopup(
             `<strong>${formTypeLabel(c.formType)}</strong> · ${c.siteName}<br/>` +
@@ -156,11 +157,11 @@ export function ControlsMap({
           Site
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold" />
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-audit" />
           Contrôle audit
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#6b8cae]" />
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-passager" />
           Contrôle passager
         </span>
         <span className="flex items-center gap-1.5">

@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { FieldLabel, Input, Select, Textarea } from "@/components/Field";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import {
   api,
@@ -682,9 +683,10 @@ export default function AdminPlanningPage() {
                               {formatDate(c.createdAt)}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-mute">
-                            {c.user.name} · {c.formType}
-                            {c.anomaly ? " · anomalie" : ""}
+                          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mute">
+                            <span>{c.user.name}</span>
+                            <FormTypeBadge formType={c.formType} />
+                            {c.anomaly ? <span>· anomalie</span> : null}
                           </p>
                         </li>
                       ))

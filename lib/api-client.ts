@@ -196,6 +196,12 @@ export function formTypeLabel(t: FormType) {
   return t === "audit" ? "Audit" : "Passager";
 }
 
+/** Rouge marque = audit · bleu = passager */
+export const FORM_TYPE_HEX: Record<FormType, string> = {
+  audit: "#8D2A26",
+  passager: "#1A6F9A",
+};
+
 export function stateLabel(s: ItemState) {
   if (s === "ok") return "Conforme";
   if (s === "no") return "Non conforme";

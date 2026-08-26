@@ -26,6 +26,8 @@ module.exports = {
         mute: "rgb(102 102 102 / <alpha-value>)",
         na: "rgb(153 153 153 / <alpha-value>)",
         ok: "rgb(61 143 110 / <alpha-value>)",
+        audit: "rgb(141 42 38 / <alpha-value>)",
+        passager: "rgb(26 111 154 / <alpha-value>)",
         line: "rgb(0 0 0 / 0.08)",
       },
       fontFamily: {

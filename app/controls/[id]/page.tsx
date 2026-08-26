@@ -12,7 +12,6 @@ import {
   api,
   ApiError,
   formatDate,
-  formTypeLabel,
   stateLabel,
   type Control,
 } from "@/lib/api-client";
@@ -65,9 +64,10 @@ export default function ControlDetailPage() {
           <h2 className="mt-2 font-display text-2xl text-mist">
             {control.establishment?.name ?? "Établissement"}
           </h2>
-          <p className="mt-1 text-sm text-mute">
-            {formTypeLabel(control.formType)} · {formatDate(control.createdAt)}
-            {control.user ? ` · ${control.user.name}` : ""}
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-mute">
+            <FormTypeBadge formType={control.formType} />
+            <span>· {formatDate(control.createdAt)}</span>
+            {control.user ? <span>· {control.user.name}</span> : null}
           </p>
         </div>
         <StatusBadge tone={control.anomaly ? "alert" : "ok"}>

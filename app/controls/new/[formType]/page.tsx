@@ -9,10 +9,10 @@ import { FieldLabel, Select, Textarea } from "@/components/Field";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import { ProgressBar } from "@/components/ProgressBar";
 import { StateButton } from "@/components/StateButton";
+import { FormTypeBadge } from "@/components/FormTypeBadge";
 import {
   api,
   ApiError,
-  formTypeLabel,
   type ChecklistDef,
   type Establishment,
   type FormType,
@@ -176,8 +176,8 @@ export default function ControlFormPage() {
     <AppShell title={checklist.title || "Checklist"}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="gms-eyebrow">{formTypeLabel(formType)}</p>
-          <h2 className="mt-1 font-display text-2xl text-mist">
+          <FormTypeBadge formType={formType} />
+          <h2 className="mt-2 font-display text-2xl text-mist">
             {checklist.title}
           </h2>
           <p className="mt-1 text-sm text-mute">
