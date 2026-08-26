@@ -143,17 +143,17 @@ export async function api<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
-    const { mockApi } = await import("@/lib/mock-api");
-    return mockApi<T>(path, options);
-  }
-
   const token = getToken();
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
   }
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
+    const { mockApi } = await import("@/lib/mock-api");
+    return mockApi<T>(path, { ...options, headers });
+  }
 
   let res: Response;
   try {
