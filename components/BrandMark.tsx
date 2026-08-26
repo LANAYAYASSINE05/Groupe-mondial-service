@@ -38,36 +38,45 @@ export function BrandMark({
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
-    const logo = rootRef.current.querySelector("[data-brand-logo]");
-    const lines = rootRef.current.querySelectorAll("[data-brand-line]");
+    const ctx = gsap.context(() => {
+      const logo = rootRef.current?.querySelector("[data-brand-logo]");
+      const lines = Array.from(
+        rootRef.current?.querySelectorAll("[data-brand-line]") ?? []
+      );
+      if (!logo && lines.length === 0) return;
 
-    if (reduced) {
-      gsap.set([logo, lines], { opacity: 1, y: 0, scale: 1 });
-      return;
-    }
+      if (reduced) {
+        if (logo) gsap.set(logo, { opacity: 1, y: 0, scale: 1 });
+        if (lines.length) gsap.set(lines, { opacity: 1, y: 0, scale: 1 });
+        return;
+      }
 
-    const tl = gsap.timeline();
-    tl.fromTo(
-      logo,
-      { opacity: 0, scale: 0.96 },
-      { opacity: 1, scale: 1, duration: 0.55, ease: "power2.out" }
-    )
-      .fromTo(
-        lines,
-        { opacity: 0, y: 10 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.35,
-          stagger: 0.1,
-          ease: "power2.out",
-        },
-        "-=0.15"
-      )
-      .add(() => logo?.classList.add("is-active"));
+      const tl = gsap.timeline();
+      if (logo) {
+        tl.fromTo(
+          logo,
+          { opacity: 0, scale: 0.96 },
+          { opacity: 1, scale: 1, duration: 0.55, ease: "power2.out" }
+        ).add(() => logo.classList.add("is-active"));
+      }
+      if (lines.length) {
+        tl.fromTo(
+          lines,
+          { opacity: 0, y: 10 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+            stagger: 0.1,
+            ease: "power2.out",
+          },
+          logo ? "-=0.15" : 0
+        );
+      }
+    }, rootRef);
 
     return () => {
-      tl.kill();
+      ctx.revert();
     };
   }, [animate]);
 

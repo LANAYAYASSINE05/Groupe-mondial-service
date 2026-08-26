@@ -27,42 +27,47 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!pageRef.current) return;
+    if (loading || user || !pageRef.current) return;
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
-    const brand = pageRef.current.querySelector("[data-login-brand]");
-    const form = pageRef.current.querySelector("[data-login-form]");
-    const foot = pageRef.current.querySelector("[data-login-foot]");
-
-    if (reduced) {
-      gsap.set([brand, form, foot], { opacity: 1, y: 0 });
-      return;
-    }
-
-    const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
-    tl.fromTo(
-      brand,
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.55 }
-    )
-      .fromTo(
-        form,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5 },
-        "-=0.25"
-      )
-      .fromTo(
-        foot,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.4 },
-        "-=0.2"
+    const ctx = gsap.context(() => {
+      const brand = pageRef.current?.querySelector("[data-login-brand]");
+      const form = pageRef.current?.querySelector("[data-login-form]");
+      const foot = pageRef.current?.querySelector("[data-login-foot]");
+      const targets = [brand, form, foot].filter(
+        (el): el is Element => el != null
       );
+      if (targets.length === 0) return;
+
+      if (reduced) {
+        gsap.set(targets, { opacity: 1, y: 0 });
+        return;
+      }
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      if (brand) {
+        tl.fromTo(brand, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 });
+      }
+      if (form) {
+        tl.fromTo(
+          form,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5 },
+          "-=0.25"
+        );
+      }
+      if (foot) {
+        tl.fromTo(foot, { opacity: 0 }, { opacity: 1, duration: 0.4 }, "-=0.2");
+      }
+    }, pageRef);
 
     return () => {
-      tl.kill();
+      ctx.revert();
     };
-  }, []);
+    // Only when the session check finishes — not on login success (avoids reverting to opacity-0).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- user is read once loading is false
+  }, [loading]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
