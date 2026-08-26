@@ -34,6 +34,7 @@ type ControlsMapProps = {
   controls: MapControlPoint[];
   geoOnly: boolean;
   className?: string;
+  mapClassName?: string;
 };
 
 export function ControlsMap({
@@ -41,6 +42,7 @@ export function ControlsMap({
   controls,
   geoOnly,
   className = "",
+  mapClassName = "h-[min(420px,55vh)]",
 }: ControlsMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
@@ -148,7 +150,7 @@ export function ControlsMap({
     <div className={`relative ${className}`}>
       <div
         ref={containerRef}
-        className="h-[min(420px,55vh)] w-full rounded-sm border border-line bg-surface"
+        className={`${mapClassName} w-full rounded-sm border border-line bg-surface`}
         aria-label="Carte des contrôles"
       />
       <div className="mt-3 flex flex-wrap gap-4 text-[0.65rem] uppercase tracking-[0.12em] text-mute">

@@ -94,6 +94,12 @@ export function AppShell({
   const adminLinks: NavItem[] = [
     { href: "/admin", label: "Tableau de bord", section: "Vue", icon: "dashboard" },
     {
+      href: "/admin/map",
+      label: "Carte des contrôles",
+      section: "Vue",
+      icon: "map",
+    },
+    {
       href: "/admin/planning",
       label: "Planning hebdo",
       section: "Opérations",

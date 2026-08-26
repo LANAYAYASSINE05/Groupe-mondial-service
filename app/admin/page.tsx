@@ -9,17 +9,12 @@ import { HistogramChart, type HistogramBar } from "@/components/HistogramChart";
 import { DonutChart } from "@/components/DonutChart";
 import { QuickActionList } from "@/components/QuickActionList";
 import {
-  ControlsMap,
-  GeoCheckbox,
-  type MapControlPoint,
-  type MapSite,
-} from "@/components/ControlsMap";
-import {
   IconBuilding,
   IconCalendar,
   IconReport,
   IconUsers,
   IconClipboard,
+  IconMapPin,
 } from "@/components/Icons";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { api, ApiError, formatDate, type Control } from "@/lib/api-client";
@@ -107,41 +102,30 @@ export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<ReportKpis | null>(null);
   const [summaries, setSummaries] = useState<ReportSummaries | null>(null);
   const [recent, setRecent] = useState<Control[]>([]);
-  const [mapSites, setMapSites] = useState<MapSite[]>([]);
-  const [mapControls, setMapControls] = useState<MapControlPoint[]>([]);
-  const [mapStats, setMapStats] = useState<{
-    withGps: number;
-    totalControls: number;
-  } | null>(null);
-  const [geoOnly, setGeoOnly] = useState(false);
+  const [gpsCount, setGpsCount] = useState<{ withGps: number; total: number } | null>(
+    null
+  );
   const { push } = useToast();
   const { user, loading } = useAuth();
 
   useEffect(() => {
     if (loading || !user) return;
     let cancelled = false;
-    Promise.all([
-      api<{
-        kpis: ReportKpis;
-        controls: Control[];
-        summaries: ReportSummaries;
-      }>("/api/reports"),
-      api<{
-        establishments: MapSite[];
-        controls: MapControlPoint[];
-        stats: { withGps: number; totalControls: number; sitesOnMap: number };
-      }>("/api/reports/map"),
-    ])
-      .then(([report, map]) => {
+    api<{
+      kpis: ReportKpis;
+      controls: Control[];
+      summaries: ReportSummaries;
+    }>("/api/reports")
+      .then((report) => {
         if (cancelled) return;
         setKpis(report.kpis);
         setSummaries(report.summaries);
-        setRecent((report.controls || []).slice(0, 8));
-        setMapSites(map.establishments);
-        setMapControls(map.controls);
-        setMapStats({
-          withGps: map.stats.withGps,
-          totalControls: map.stats.totalControls,
+        const list = report.controls || [];
+        setRecent(list.slice(0, 8));
+        setGpsCount({
+          withGps: list.filter((c) => c.latitude != null && c.longitude != null)
+            .length,
+          total: list.length,
         });
       })
       .catch((err) => {
@@ -200,22 +184,22 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/admin/reports">
+          <Link href="/admin/map">
             <Button className="min-h-11">
+              <IconMapPin className="h-4 w-4" />
+              Carte
+            </Button>
+          </Link>
+          <Link href="/admin/reports">
+            <Button variant="secondary" className="min-h-11">
               <IconReport className="h-4 w-4" />
               Rapports
             </Button>
           </Link>
           <Link href="/admin/users">
-            <Button variant="secondary" className="min-h-11">
+            <Button variant="ghost" className="min-h-11">
               <IconUsers className="h-4 w-4" />
               Comptes
-            </Button>
-          </Link>
-          <Link href="/admin/establishments">
-            <Button variant="ghost" className="min-h-11">
-              <IconBuilding className="h-4 w-4" />
-              Sites
             </Button>
           </Link>
         </div>
@@ -233,27 +217,9 @@ export default function AdminDashboardPage() {
         <KpiTile
           label="Avec GPS"
           value={
-            mapStats ? `${mapStats.withGps} / ${mapStats.totalControls}` : "—"
+            gpsCount ? `${gpsCount.withGps} / ${gpsCount.total}` : "—"
           }
         />
-      </div>
-
-      <div className="mt-6">
-        <DashPanel title="Carte des contrôles">
-          <div className="space-y-4 p-4 sm:p-5">
-            <GeoCheckbox
-              checked={geoOnly}
-              onChange={setGeoOnly}
-              label="Afficher uniquement les contrôles géolocalisés"
-              hint="Décochez pour inclure aussi les points positionnés sur le site (sans GPS propre au contrôle)."
-            />
-            <ControlsMap
-              sites={mapSites}
-              controls={mapControls}
-              geoOnly={geoOnly}
-            />
-          </div>
-        </DashPanel>
       </div>
 
       <div className="mt-6">
@@ -446,6 +412,11 @@ export default function AdminDashboardPage() {
           <DashPanel title="Actions rapides">
             <QuickActionList
               actions={[
+                {
+                  href: "/admin/map",
+                  label: "Carte des contrôles",
+                  icon: IconMapPin,
+                },
                 {
                   href: "/admin/planning",
                   label: "Planning hebdomadaire",
