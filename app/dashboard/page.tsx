@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
-import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { DashPanel, DashTable, KpiTile, ControlCards, PageToolbar } from "@/components/DashWidgets";
 import { QuickActionList } from "@/components/QuickActionList";
 import {
   IconChart,
@@ -47,25 +47,20 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Tableau de bord">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="gms-eyebrow">Espace contrôleur</p>
-          <h2 className="mt-1 font-display text-2xl text-mist">
-            {user?.name ?? "Tableau de bord"}
-          </h2>
-          <p className="mt-1 text-sm text-mute">
-            Synthèse de vos contrôles terrain.
-          </p>
-        </div>
+      <PageToolbar
+        eyebrow="Espace contrôleur"
+        title={user?.name ?? "Tableau de bord"}
+        description="Synthèse de vos contrôles terrain."
+      >
         <Link href="/controls/new">
-          <Button className="min-h-11">
+          <Button className="min-h-11 w-full sm:w-auto">
             <IconPlus className="h-4 w-4" />
             Nouveau contrôle
           </Button>
         </Link>
-      </div>
+      </PageToolbar>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <KpiTile label="Contrôles" value={stats?.total ?? "—"} />
         <KpiTile
           label="Anomalies"
@@ -100,6 +95,12 @@ export default function DashboardPage() {
           ) : (
             <DashTable
               columns={["Date", "Site", "Formulaire", "Statut", ""]}
+              stacked={
+                <ControlCards
+                  controls={stats.recent}
+                  linkLabel="Détail"
+                />
+              }
             >
               {stats.recent.map((c) => (
                 <tr

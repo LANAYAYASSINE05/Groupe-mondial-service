@@ -84,7 +84,7 @@ export default function ControllerPlanningPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="gms-eyebrow">Opérations</p>
-            <h1 className="mt-2 font-display text-2xl font-semibold text-mist">
+            <h1 className="mt-2 font-display text-xl font-semibold text-mist sm:text-2xl">
               Planning des contrôles
             </h1>
             <p className="mt-2 text-sm text-mute">
@@ -117,7 +117,7 @@ export default function ControllerPlanningPage() {
         </div>
 
         {week ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiTile label="Affectés" value={week.kpis.total} />
             <KpiTile label="Planifiés" value={week.kpis.planifie} />
             <KpiTile label="En cours" value={week.kpis.enCours} />
@@ -178,9 +178,10 @@ export default function ControllerPlanningPage() {
           </ul>
         </DashPanel>
 
-        <DashPanel title="Vue hebdomadaire">
-          <div className="overflow-x-auto p-2">
-            <table className="min-w-[900px] w-full border-collapse text-sm">
+        <div className="hidden md:block">
+          <DashPanel title="Vue hebdomadaire">
+            <div className="overflow-x-auto p-2">
+              <table className="min-w-[900px] w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-surface/80 text-[0.65rem] uppercase tracking-[0.1em] text-mute">
                   <th className="border border-line px-3 py-2 text-left">
@@ -234,8 +235,9 @@ export default function ControllerPlanningPage() {
                 )}
               </tbody>
             </table>
-          </div>
-        </DashPanel>
+            </div>
+          </DashPanel>
+        </div>
       </div>
     </AppShell>
   );

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
-import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { DashPanel, DashTable, KpiTile, ControlCards, PageToolbar } from "@/components/DashWidgets";
 import { HistogramChart, type HistogramBar } from "@/components/HistogramChart";
 import { DonutChart } from "@/components/DonutChart";
 import { QuickActionList } from "@/components/QuickActionList";
@@ -173,39 +173,32 @@ export default function AdminDashboardPage() {
 
   return (
     <AppShell requireAdmin title="Administration">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="gms-eyebrow">Pilotage</p>
-          <h2 className="mt-1 font-display text-2xl text-mist">
-            Tableau de bord admin
-          </h2>
-          <p className="mt-1 text-sm text-mute">
-            Vue consolidée des contrôles, sites et anomalies.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/map">
-            <Button className="min-h-11">
-              <IconMapPin className="h-4 w-4" />
-              Carte
-            </Button>
-          </Link>
-          <Link href="/admin/reports">
-            <Button variant="secondary" className="min-h-11">
-              <IconReport className="h-4 w-4" />
-              Rapports
-            </Button>
-          </Link>
-          <Link href="/admin/users">
-            <Button variant="ghost" className="min-h-11">
-              <IconUsers className="h-4 w-4" />
-              Comptes
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <PageToolbar
+        eyebrow="Pilotage"
+        title="Tableau de bord admin"
+        description="Vue consolidée des contrôles, sites et anomalies."
+      >
+        <Link href="/admin/map">
+          <Button className="min-h-11 w-full sm:w-auto">
+            <IconMapPin className="h-4 w-4" />
+            Carte
+          </Button>
+        </Link>
+        <Link href="/admin/reports">
+          <Button variant="secondary" className="min-h-11 w-full sm:w-auto">
+            <IconReport className="h-4 w-4" />
+            Rapports
+          </Button>
+        </Link>
+        <Link href="/admin/users">
+          <Button variant="ghost" className="min-h-11 w-full sm:w-auto">
+            <IconUsers className="h-4 w-4" />
+            Comptes
+          </Button>
+        </Link>
+      </PageToolbar>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <KpiTile label="Contrôles" value={kpis?.total ?? "—"} />
         <KpiTile
           label="Anomalies"
@@ -367,6 +360,13 @@ export default function AdminDashboardPage() {
           ) : (
             <DashTable
               columns={["Date", "Site", "Contrôleur", "Type", "GPS", "Anomalie"]}
+              stacked={
+                <ControlCards
+                  controls={recent}
+                  showController
+                  linkLabel="Détail"
+                />
+              }
             >
               {recent.map((c) => (
                 <tr

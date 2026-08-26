@@ -74,7 +74,7 @@ export default function AdminMapPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="gms-eyebrow">Analyse</p>
-          <h2 className="mt-1 font-display text-2xl text-mist">
+          <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">
             Carte des contrôles
           </h2>
           <p className="mt-1 text-sm text-mute">
@@ -83,7 +83,7 @@ export default function AdminMapPage() {
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
         <KpiTile label="Sites" value={stats?.sitesOnMap ?? sites.length} />
         <KpiTile
           label="Contrôles"
@@ -161,7 +161,7 @@ export default function AdminMapPage() {
             sites={sites}
             controls={filteredControls}
             geoOnly={geoOnly}
-            mapClassName="h-[min(72vh,760px)]"
+            mapClassName="h-[min(52vh,380px)] sm:h-[min(64vh,560px)] lg:h-[min(72vh,760px)]"
           />
         </div>
       </DashPanel>

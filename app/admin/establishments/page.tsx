@@ -140,7 +140,7 @@ export default function AdminEstablishmentsPage() {
     <AppShell requireAdmin title="Établissements">
       <div className="mb-6">
         <p className="gms-eyebrow">Administration</p>
-        <h2 className="mt-1 font-display text-2xl text-mist">
+        <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">
           Gestion des sites
         </h2>
         <p className="mt-1 text-sm text-mute">
@@ -148,7 +148,7 @@ export default function AdminEstablishmentsPage() {
         </p>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile label="Total sites" value={list.length} />
         <KpiTile label="Actifs" value={active} tone="ok" />
         <KpiTile label="Avec GPS" value={withGps} />
@@ -228,6 +228,50 @@ export default function AdminEstablishmentsPage() {
       </div>
 
       <DashPanel title="Liste des établissements">
+        <ul className="divide-y divide-line md:hidden">
+          {list.map((e) => (
+            <li key={e.id} className="space-y-3 p-4">
+              <div>
+                <p className="font-medium text-mist">{e.name}</p>
+                <p className="mt-1 text-sm text-mute">{e.address || "—"}</p>
+                <p className="mt-1 font-mono text-xs text-mute">
+                  {formatCoords(e)}
+                </p>
+                <p
+                  className={`mt-1 text-[0.65rem] uppercase tracking-label ${
+                    e.active ? "text-ok" : "text-brand-light"
+                  }`}
+                >
+                  {e.active ? "Actif" : "Inactif"}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="secondary"
+                  className="min-h-10 text-xs"
+                  onClick={() => setSiteGps(e)}
+                >
+                  GPS ici
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="min-h-10 text-xs"
+                  onClick={() => toggleActive(e)}
+                >
+                  {e.active ? "Désactiver" : "Réactiver"}
+                </Button>
+                <Button
+                  variant="danger"
+                  className="col-span-2 min-h-10 text-xs"
+                  onClick={() => onDelete(e)}
+                >
+                  Supprimer
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden md:block">
         <DashTable columns={["Nom", "Adresse", "GPS", "Statut", "Actions"]}>
           {list.map((e) => (
             <tr key={e.id} className="border-b border-line">
@@ -269,6 +313,7 @@ export default function AdminEstablishmentsPage() {
             </tr>
           ))}
         </DashTable>
+        </div>
       </DashPanel>
     </AppShell>
   );

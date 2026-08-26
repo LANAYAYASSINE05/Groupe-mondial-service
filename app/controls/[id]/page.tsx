@@ -61,7 +61,7 @@ export default function ControlDetailPage() {
           >
             ← Historique
           </Link>
-          <h2 className="mt-2 font-display text-2xl text-mist">
+          <h2 className="mt-2 font-display text-xl text-mist sm:text-2xl">
             {control.establishment?.name ?? "Établissement"}
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-mute">
@@ -75,7 +75,7 @@ export default function ControlDetailPage() {
         </StatusBadge>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile label="Points" value={control.items?.length ?? 0} />
         <KpiTile
           label="Non conformes"
@@ -91,7 +91,40 @@ export default function ControlDetailPage() {
 
       <div className="space-y-4">
         <DashPanel title="Résultats">
-          <DashTable columns={["#", "Type", "Point", "État", "Commentaire"]}>
+          <DashTable
+            columns={["#", "Type", "Point", "État", "Commentaire"]}
+            stacked={
+              <ul className="divide-y divide-line">
+                {control.items?.map((item) => (
+                  <li key={item.id} className="px-4 py-3.5">
+                    <p className="text-sm font-medium text-mist">
+                      <span className="mr-2 font-display tabular-nums text-mute">
+                        {String(item.position).padStart(2, "0")}
+                      </span>
+                      {item.label}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <FormTypeBadge formType={control.formType} />
+                      <span
+                        className={`font-display text-xs uppercase tracking-[0.1em] ${
+                          item.state === "ok"
+                            ? "text-ok"
+                            : item.state === "no"
+                              ? "text-brand-light"
+                              : "text-na"
+                        }`}
+                      >
+                        {stateLabel(item.state)}
+                      </span>
+                    </div>
+                    {item.comment ? (
+                      <p className="mt-2 text-sm text-mute">{item.comment}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            }
+          >
             {control.items?.map((item) => (
               <tr key={item.id} className="border-b border-line">
                 <td className="px-4 py-3 font-display tabular-nums text-mute">
@@ -129,7 +162,7 @@ export default function ControlDetailPage() {
         )}
 
         <Link href="/controls/new">
-          <Button className="min-h-11">Nouveau contrôle</Button>
+          <Button className="min-h-11 w-full sm:w-auto">Nouveau contrôle</Button>
         </Link>
       </div>
     </AppShell>

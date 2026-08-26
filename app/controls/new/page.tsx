@@ -59,7 +59,7 @@ export default function NewControlChoicePage() {
     <AppShell title="Nouveau contrôle">
       <div className="mx-auto max-w-2xl">
         <p className="gms-eyebrow">Étape 1 · Type</p>
-        <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-mist sm:text-3xl">
+        <h2 className="mt-2 font-display text-xl font-semibold tracking-tight text-mist sm:text-3xl">
           Quel contrôle effectuez-vous ?
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-mute">
@@ -89,7 +89,7 @@ export default function NewControlChoicePage() {
                 return (
                   <label
                     key={value}
-                    className={`group relative flex cursor-pointer flex-col border p-6 transition duration-brand ${
+                    className={`group relative flex cursor-pointer flex-col border p-5 transition duration-brand sm:p-6 ${
                       selected
                         ? selectedClass
                         : "border-line bg-white hover:border-brand/35 hover:bg-surface/40"

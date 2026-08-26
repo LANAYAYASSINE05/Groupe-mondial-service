@@ -358,7 +358,7 @@ export default function AdminPlanningPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="gms-eyebrow">Opérations</p>
-            <h1 className="mt-2 font-display text-2xl font-semibold text-mist">
+            <h1 className="mt-2 font-display text-xl font-semibold text-mist sm:text-2xl">
               Planification des contrôles hebdomadaires
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-mute">
@@ -366,31 +366,34 @@ export default function AdminPlanningPage() {
               suivez l’état semaine par semaine.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Button
               type="button"
               variant="ghost"
+              className="min-h-10 flex-1 sm:flex-none"
               onClick={() =>
                 weekStart && loadWeek(shiftWeek(weekStart, -7)).catch(() => {})
               }
             >
-              ← Semaine préc.
+              ← Préc.
             </Button>
-            <span className="rounded border border-line px-3 py-2 font-display text-xs uppercase tracking-[0.12em] text-gold">
+            <span className="order-first w-full rounded border border-line px-3 py-2 text-center font-display text-[0.65rem] uppercase tracking-[0.12em] text-gold sm:order-none sm:w-auto">
               {weekLabel || "…"}
             </span>
             <Button
               type="button"
               variant="ghost"
+              className="min-h-10 flex-1 sm:flex-none"
               onClick={() =>
                 weekStart && loadWeek(shiftWeek(weekStart, 7)).catch(() => {})
               }
             >
-              Semaine suiv. →
+              Suiv. →
             </Button>
             <Button
               type="button"
               variant="ghost"
+              className="min-h-10 w-full sm:w-auto"
               onClick={() => loadWeek().catch(() => {})}
             >
               Aujourd’hui
@@ -399,7 +402,7 @@ export default function AdminPlanningPage() {
         </div>
 
         {week ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <KpiTile label="Total" value={week.kpis.total} />
             <KpiTile label="Planifiés" value={week.kpis.planifie} />
             <KpiTile label="En cours" value={week.kpis.enCours} />
@@ -502,7 +505,94 @@ export default function AdminPlanningPage() {
         </DashPanel>
 
         <DashPanel title="Planning de la semaine">
-          <div className="overflow-x-auto p-2">
+          <div className="space-y-3 p-4 lg:hidden">
+            {!week || week.plans.length === 0 ? (
+              <p className="py-6 text-center text-sm text-mute">
+                Aucun contrôle planifié pour cette semaine.
+              </p>
+            ) : (
+              week.plans.map((plan) => (
+                <article
+                  key={plan.id}
+                  className="space-y-2 border border-line bg-surface/40 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-mist">
+                        {plan.establishment.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-mute">
+                        {plan.dayLabel} · {formatDate(plan.plannedAt)}
+                        {" → "}
+                        {formatDate(plan.plannedUntil || plan.plannedAt)}
+                      </p>
+                    </div>
+                    <select
+                      className={`shrink-0 rounded border px-2 py-1 text-[0.65rem] ${statusTone(plan.status)}`}
+                      value={plan.status}
+                      onChange={(e) =>
+                        updateStatus(plan.id, e.target.value as PlanStatus)
+                      }
+                      aria-label="État du contrôle"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {planStatusLabel(s)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-xs text-mute">
+                    {plan.assignees.map((a) => a.name).join(", ") || "—"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {plan.control ? (
+                      <Link
+                        href={`/controls/${plan.control.id}`}
+                        className="text-xs text-gold hover:underline"
+                      >
+                        Voir le rapport
+                      </Link>
+                    ) : (
+                      <form
+                        className="flex min-w-0 flex-1 gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const fd = new FormData(e.currentTarget);
+                          linkControl(plan.id, String(fd.get("ref") || ""));
+                          e.currentTarget.reset();
+                        }}
+                      >
+                        <input
+                          name="ref"
+                          placeholder="UUID rapport"
+                          className="gms-field min-h-9 flex-1 px-2 py-1 text-xs"
+                          aria-label="Référence rapport"
+                        />
+                        <button
+                          type="submit"
+                          className="text-xs text-gold hover:underline"
+                        >
+                          Lier
+                        </button>
+                      </form>
+                    )}
+                    <button
+                      type="button"
+                      className="text-xs text-mute hover:text-brand"
+                      onClick={() => removePlan(plan.id)}
+                    >
+                      Suppr.
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+            <p className="text-center text-[0.65rem] text-mute">
+              Vue tableau disponible sur écran large.
+            </p>
+          </div>
+          <div className="hidden overflow-x-auto p-2 lg:block">
             <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-surface/80 text-[0.65rem] uppercase tracking-[0.1em] text-mute">

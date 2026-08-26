@@ -9,7 +9,7 @@ import {
   FormTypeBadge,
   TableViewToggle,
 } from "@/components/FormTypeBadge";
-import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { DashPanel, DashTable, KpiTile, PageToolbar } from "@/components/DashWidgets";
 import { IconSearch } from "@/components/Icons";
 import {
   api,
@@ -241,42 +241,37 @@ export default function AdminReportsPage() {
 
   return (
     <AppShell requireAdmin title="Rapports">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="gms-eyebrow">Administration</p>
-          <h2 className="mt-1 font-display text-2xl text-mist">
-            Synthèse des contrôles
-          </h2>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            className="min-h-11"
-            disabled={filtersPending || !report}
-            onClick={() => downloadExport("csv")}
-            title={
-              filtersPending
-                ? "Appliquez les filtres avec Rechercher"
-                : undefined
-            }
-          >
-            Export CSV ({tableView === "global" ? "globale" : "détail"})
-          </Button>
-          <Button
-            variant="secondary"
-            className="min-h-11"
-            disabled={filtersPending || !report}
-            onClick={() => downloadExport("xlsx")}
-            title={
-              filtersPending
-                ? "Appliquez les filtres avec Rechercher"
-                : undefined
-            }
-          >
-            Export Excel ({tableView === "global" ? "globale" : "détail"})
-          </Button>
-        </div>
-      </div>
+      <PageToolbar
+        eyebrow="Administration"
+        title="Synthèse des contrôles"
+      >
+        <Button
+          variant="secondary"
+          className="min-h-11 w-full sm:w-auto"
+          disabled={filtersPending || !report}
+          onClick={() => downloadExport("csv")}
+          title={
+            filtersPending
+              ? "Appliquez les filtres avec Rechercher"
+              : undefined
+          }
+        >
+          Export CSV ({tableView === "global" ? "globale" : "détail"})
+        </Button>
+        <Button
+          variant="secondary"
+          className="min-h-11 w-full sm:w-auto"
+          disabled={filtersPending || !report}
+          onClick={() => downloadExport("xlsx")}
+          title={
+            filtersPending
+              ? "Appliquez les filtres avec Rechercher"
+              : undefined
+          }
+        >
+          Export Excel ({tableView === "global" ? "globale" : "détail"})
+        </Button>
+      </PageToolbar>
 
       <DashPanel title="Filtres">
         <form onSubmit={onSearch} className="p-4 sm:p-5">
@@ -392,7 +387,7 @@ export default function AdminReportsPage() {
             <TableViewToggle value={tableView} onChange={setTableView} />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiTile label="Total" value={report.kpis.total} />
             <KpiTile
               label="Anomalies"

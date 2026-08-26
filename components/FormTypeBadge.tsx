@@ -31,11 +31,11 @@ export function TableViewToggle({
   onChange: (v: "global" | "detail") => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-line p-0.5">
+    <div className="flex w-full rounded-md border border-line p-0.5 sm:inline-flex sm:w-auto">
       <button
         type="button"
         onClick={() => onChange("global")}
-        className={`rounded px-3 py-1.5 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors ${
+        className={`min-h-11 flex-1 rounded px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
           value === "global"
             ? "bg-brand text-white"
             : "text-mute hover:text-mist"
@@ -46,7 +46,7 @@ export function TableViewToggle({
       <button
         type="button"
         onClick={() => onChange("detail")}
-        className={`rounded px-3 py-1.5 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors ${
+        className={`min-h-11 flex-1 rounded px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
           value === "detail"
             ? "bg-brand text-white"
             : "text-mute hover:text-mist"

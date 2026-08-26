@@ -177,7 +177,7 @@ export default function ControlFormPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <FormTypeBadge formType={formType} />
-          <h2 className="mt-2 font-display text-2xl text-mist">
+          <h2 className="mt-2 font-display text-xl text-mist sm:text-2xl">
             {checklist.title}
           </h2>
           <p className="mt-1 text-sm text-mute">
@@ -192,7 +192,7 @@ export default function ControlFormPage() {
         </Link>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile label="Progression" value={`${progress} %`} />
         <KpiTile
           label="Restants"
@@ -313,7 +313,7 @@ export default function ControlFormPage() {
           </div>
         </DashPanel>
 
-        <div className="sticky bottom-0 z-20 -mx-4 border-t border-line bg-white/95 px-4 py-4 backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-0 z-20 -mx-3 border-t border-line bg-white/95 px-3 py-3 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:backdrop-blur-none">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button
               type="submit"

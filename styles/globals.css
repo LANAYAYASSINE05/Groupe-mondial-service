@@ -33,8 +33,11 @@
   html,
   body {
     min-height: 100%;
+    max-width: 100%;
+    overflow-x: clip;
     background: var(--gms-ink);
     color: var(--gms-mist);
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -86,7 +89,7 @@
   }
 
   .gms-title {
-    @apply font-display text-3xl font-semibold tracking-tight text-mist sm:text-[2.1rem];
+    @apply font-display text-2xl font-semibold tracking-tight text-mist sm:text-[2.1rem];
   }
 
   .gms-lead {
@@ -104,7 +107,7 @@
   }
 
   .gms-panel-pad {
-    @apply gms-panel p-6 sm:p-8;
+    @apply gms-panel p-4 sm:p-8;
   }
 
   .gms-nav-link {
@@ -132,13 +135,13 @@
 
   .gms-field {
     @apply w-full appearance-none outline-none;
-    min-height: 3.5rem;
-    padding: 0.9rem 1.1rem;
+    min-height: 3.25rem;
+    padding: 0.85rem 1rem;
     border: 1px solid var(--gms-line);
     border-radius: 0;
     background: var(--gms-field);
     color: var(--gms-field-text);
-    font-size: 0.98rem;
+    font-size: 1rem;
     line-height: 1.35;
     letter-spacing: 0.01em;
     caret-color: var(--gms-brand);
@@ -283,7 +286,7 @@
   }
 
   .gms-choice {
-    @apply block border bg-white p-7 transition duration-brand;
+    @apply block border bg-white p-5 sm:p-7 transition duration-brand;
     border-left: 3px solid var(--gms-brand);
     border-color: var(--gms-line);
     border-left-color: var(--gms-brand);
@@ -308,7 +311,9 @@
     display: flex;
     align-items: center;
     width: var(--gms-logo-w, auto);
-    height: var(--gms-logo-h, auto);
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: var(--gms-logo-ratio, 1430 / 1254);
   }
 
   .gms-logo-img {
@@ -493,6 +498,31 @@
   50% {
     opacity: 1;
     transform: scaleY(1);
+  }
+}
+
+.leaflet-container {
+  width: 100%;
+  max-width: 100%;
+  z-index: 0;
+}
+
+.gms-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 767px) {
+  .gms-table-scroll {
+    background:
+      linear-gradient(to right, #fff 20%, transparent) 0 0 / 1.5rem 100% no-repeat,
+      linear-gradient(to left, #fff 20%, transparent) 100% 0 / 1.5rem 100% no-repeat,
+      linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent) 0 0 / 0.7rem 100%
+        no-repeat,
+      linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent) 100% 0 / 0.7rem
+        100% no-repeat;
+    background-attachment: local, local, scroll, scroll;
   }
 }
 

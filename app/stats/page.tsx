@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
+import { DashPanel, DashTable, KpiTile, ControlCards } from "@/components/DashWidgets";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { DonutChart } from "@/components/DonutChart";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -47,7 +47,7 @@ export default function StatsPage() {
     <AppShell title="Statistiques">
       <div className="mb-6">
         <p className="gms-eyebrow">Analyse</p>
-        <h2 className="mt-1 font-display text-2xl text-mist">
+        <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">
           Mes statistiques
         </h2>
         <p className="mt-1 text-sm text-mute">
@@ -59,7 +59,7 @@ export default function StatsPage() {
         <p className="text-mute">Chargement…</p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
             <KpiTile label="Total" value={stats.total} />
             <KpiTile label="Anomalies" value={stats.anomalies} tone="alert" />
             <KpiTile label="Taux anomalie" value={`${rate} %`} />
@@ -119,6 +119,9 @@ export default function StatsPage() {
               ) : (
                 <DashTable
                   columns={["Date", "Site", "Formulaire", "Statut", ""]}
+                  stacked={
+                    <ControlCards controls={stats.recent} linkLabel="Détail" />
+                  }
                 >
                   {stats.recent.map((c) => (
                     <tr

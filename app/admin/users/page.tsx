@@ -274,15 +274,15 @@ export default function AdminUsersPage() {
     <AppShell requireAdmin title="Comptes">
       <div className="mb-6">
         <p className="gms-eyebrow">Administration</p>
-        <h2 className="mt-1 font-display text-2xl text-mist">
-          Gestion des comptes
-        </h2>
+          <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">
+            Gestion des comptes
+          </h2>
         <p className="mt-1 text-sm text-mute">
           Le type de formulaire se choisit à chaque contrôle, pas sur le compte.
         </p>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile label="Total" value={users.length} />
         <KpiTile label="Actifs" value={active} tone="ok" />
         <KpiTile label="Admins" value={admins} />
@@ -366,6 +366,77 @@ export default function AdminUsersPage() {
       </div>
 
       <DashPanel title="Liste des comptes">
+        <ul className="divide-y divide-line md:hidden">
+          {users.map((u) => (
+            <li key={u.id} className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-mist">{u.name}</p>
+                  <p className="truncate text-xs text-mute">{u.email}</p>
+                  <p className="mt-1 text-[0.65rem] uppercase tracking-label text-mute">
+                    {u.role === "admin" ? "Admin" : "Contrôleur"} ·{" "}
+                    <span className={u.active ? "text-ok" : "text-brand-light"}>
+                      {u.active ? "Actif" : "Inactif"}
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  variant={u.active ? "danger" : "secondary"}
+                  className="min-h-9 shrink-0 text-xs"
+                  onClick={() => toggleActive(u)}
+                >
+                  {u.active ? "Désactiver" : "Réactiver"}
+                </Button>
+              </div>
+              <div>
+                <FieldLabel hint="multichoix">Établissements</FieldLabel>
+                <EstablishmentMultiSelect
+                  sites={sites}
+                  value={establishmentEdits[u.id] ?? []}
+                  onChange={(ids) =>
+                    setEstablishmentEdits((prev) => ({
+                      ...prev,
+                      [u.id]: ids,
+                    }))
+                  }
+                />
+                <Button
+                  variant="secondary"
+                  className="mt-2 min-h-9 w-full text-xs"
+                  disabled={savingId === u.id}
+                  onClick={() => saveEstablishments(u)}
+                >
+                  {savingId === u.id ? "…" : "Enregistrer les sites"}
+                </Button>
+              </div>
+              <div>
+                <FieldLabel>Mot de passe</FieldLabel>
+                <PasswordInput
+                  autoComplete="new-password"
+                  minLength={6}
+                  placeholder="Nouveau mot de passe"
+                  className="min-h-9 text-sm"
+                  value={passwordEdits[u.id] ?? ""}
+                  onChange={(e) =>
+                    setPasswordEdits((prev) => ({
+                      ...prev,
+                      [u.id]: e.target.value,
+                    }))
+                  }
+                />
+                <Button
+                  variant="secondary"
+                  className="mt-2 min-h-9 w-full text-xs"
+                  disabled={savingId === u.id}
+                  onClick={() => changePassword(u)}
+                >
+                  {savingId === u.id ? "…" : "Changer le mot de passe"}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden md:block">
         <DashTable
           columns={[
             "Nom",
@@ -376,6 +447,7 @@ export default function AdminUsersPage() {
             "Mot de passe",
             "",
           ]}
+          minWidth="72rem"
         >
           {users.map((u) => (
             <tr key={u.id} className="border-b border-line">
@@ -457,6 +529,7 @@ export default function AdminUsersPage() {
             </tr>
           ))}
         </DashTable>
+        </div>
       </DashPanel>
     </AppShell>
   );

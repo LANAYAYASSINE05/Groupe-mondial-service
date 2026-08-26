@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, IBM_Plex_Sans } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/lib/toast";
@@ -25,6 +25,12 @@ export const metadata: Metadata = {
     icon: [{ url: "/brand/icon.svg", type: "image/svg+xml" }],
     apple: "/brand/logo.png",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -73,6 +73,10 @@ export function ControlsMap({
         layerRef.current = L.layerGroup().addTo(mapRef.current);
       }
 
+      requestAnimationFrame(() => {
+        mapRef.current?.invalidateSize();
+      });
+
       const group = layerRef.current!;
       group.clearLayers();
 
@@ -190,7 +194,7 @@ export function GeoCheckbox({
   hint?: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-md border border-line/80 bg-surface/40 px-3 py-2.5 transition hover:border-brand/40">
+    <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-line/80 bg-surface/40 px-3 py-3 transition hover:border-brand/40">
       <input
         type="checkbox"
         checked={checked}

@@ -40,7 +40,7 @@ export function BrandMark({
         style={
           {
             "--gms-logo-w": `min(100%, ${w}px)`,
-            "--gms-logo-h": `${h}px`,
+            "--gms-logo-ratio": `${w} / ${h}`,
           } as React.CSSProperties
         }
       >

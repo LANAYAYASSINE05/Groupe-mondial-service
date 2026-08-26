@@ -5,7 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
-import { IconLogout, IconMenu, NavIcon, type NavIconName } from "@/components/Icons";
+import {
+  IconClose,
+  IconLogout,
+  IconMenu,
+  NavIcon,
+  type NavIconName,
+} from "@/components/Icons";
 import { PageTransition } from "@/components/PageTransition";
 import { useAuth } from "@/lib/auth-context";
 
@@ -44,6 +50,20 @@ export function AppShell({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   if (loading || !user) {
     return (
@@ -163,98 +183,104 @@ export function AppShell({
     });
   }
 
+  const navContent = (
+    <>
+      <div className="border-b border-line px-4 py-5">
+        <Link href={home} className="flex flex-col items-center">
+          <BrandMark size="sm" surface="bare" />
+        </Link>
+        <p className="mt-3 text-center font-display text-[0.62rem] uppercase tracking-[0.22em] text-brand">
+          GMS Contrôle
+        </p>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+        {Object.entries(sections).map(([section, items]) => (
+          <div key={section} className="mb-6">
+            <p className="mb-2 px-3 font-display text-[0.6rem] uppercase tracking-[0.18em] text-na">
+              {section}
+            </p>
+            <ul className="space-y-0.5">{renderNav(items)}</ul>
+          </div>
+        ))}
+      </nav>
+
+      <div className="border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <p className="truncate text-sm font-medium text-mist">{user.name}</p>
+        <p className="mt-0.5 text-[0.62rem] uppercase tracking-label text-brand">
+          {user.role === "admin" ? "Administrateur" : "Contrôleur"}
+        </p>
+        <Button
+          variant="ghost"
+          className="mt-3 w-full min-h-11 text-xs"
+          onClick={() => {
+            logout();
+            router.push("/login");
+          }}
+        >
+          <IconLogout className="h-3.5 w-3.5" />
+          Déconnexion
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-ink lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden border-r border-line bg-charcoal lg:flex lg:min-h-screen lg:flex-col">
-        <div className="border-b border-line px-4 py-5">
-          <Link href={home} className="flex flex-col items-center">
-            <BrandMark size="sm" surface="bare" />
-          </Link>
-          <p className="mt-3 text-center font-display text-[0.62rem] uppercase tracking-[0.22em] text-brand">
-            GMS Contrôle
-          </p>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
-          {Object.entries(sections).map(([section, items]) => (
-            <div key={section} className="mb-6">
-              <p className="mb-2 px-3 font-display text-[0.6rem] uppercase tracking-[0.18em] text-na">
-                {section}
-              </p>
-              <ul className="space-y-0.5">{renderNav(items)}</ul>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-line p-4">
-          <p className="truncate text-sm font-medium text-mist">{user.name}</p>
-          <p className="mt-0.5 text-[0.62rem] uppercase tracking-label text-brand">
-            {user.role === "admin" ? "Administrateur" : "Contrôleur"}
-          </p>
-          <Button
-            variant="ghost"
-            className="mt-3 w-full min-h-10 text-xs"
-            onClick={() => {
-              logout();
-              router.push("/login");
-            }}
-          >
-            <IconLogout className="h-3.5 w-3.5" />
-            Déconnexion
-          </Button>
-        </div>
+        {navContent}
       </aside>
 
+      {open ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-mist/40"
+            aria-label="Fermer le menu"
+            onClick={() => setOpen(false)}
+          />
+          <aside className="relative flex h-full w-[min(20rem,88vw)] flex-col bg-white shadow-xl">
+            <div className="flex items-center justify-end border-b border-line px-2 py-2">
+              <button
+                type="button"
+                className="inline-flex h-11 w-11 items-center justify-center text-mute"
+                aria-label="Fermer le menu"
+                onClick={() => setOpen(false)}
+              >
+                <IconClose className="h-5 w-5" />
+              </button>
+            </div>
+            {navContent}
+          </aside>
+        </div>
+      ) : null}
+
       <div className="relative flex min-w-0 flex-col">
-        <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-[2px] bg-brand/50" />
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-4 backdrop-blur-sm lg:px-8">
-          <div className="flex items-center gap-3">
+        <div className="pointer-events-none absolute bottom-0 left-0 top-0 hidden w-[2px] bg-brand/50 lg:block" />
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-line bg-white/95 px-3 py-3 backdrop-blur-sm sm:gap-3 sm:px-4 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
-              className="inline-flex items-center gap-2 border border-line bg-charcoal px-3 py-2 text-xs uppercase tracking-label text-mute lg:hidden"
-              onClick={() => setOpen((v) => !v)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-line bg-charcoal text-mute lg:hidden"
+              onClick={() => setOpen(true)}
               aria-expanded={open}
+              aria-label="Ouvrir le menu"
             >
-              <IconMenu className="h-4 w-4" />
-              Menu
+              <IconMenu className="h-5 w-5" />
             </button>
-            <div>
-              <p className="gms-eyebrow">Gestion</p>
-              <h1 className="mt-1 font-display text-xl font-semibold tracking-tight text-mist sm:text-2xl">
+            <div className="min-w-0">
+              <p className="gms-eyebrow hidden sm:block">Gestion</p>
+              <h1 className="truncate font-display text-base font-semibold tracking-tight text-mist sm:mt-1 sm:text-xl lg:text-2xl">
                 {title || "GMS Contrôle"}
               </h1>
             </div>
           </div>
-          <div className="hidden text-right sm:block lg:hidden">
-            <p className="text-sm text-mist">{user.name}</p>
-          </div>
+          <p className="hidden max-w-[38%] truncate text-right text-xs text-mute sm:block lg:hidden">
+            {user.name}
+          </p>
         </header>
 
-        {open && (
-          <div className="border-b border-line bg-charcoal px-3 py-3 lg:hidden">
-            {Object.entries(sections).map(([section, items]) => (
-              <div key={section} className="mb-3">
-                <p className="mb-1 px-2 text-[0.6rem] uppercase tracking-label text-na">
-                  {section}
-                </p>
-                <ul className="space-y-0.5">{renderNav(items)}</ul>
-              </div>
-            ))}
-            <Button
-              variant="ghost"
-              className="mt-2 w-full min-h-9 text-xs"
-              onClick={() => {
-                logout();
-                router.push("/login");
-              }}
-            >
-              <IconLogout className="h-3.5 w-3.5" />
-              Déconnexion
-            </Button>
-          </div>
-        )}
-
-        <main className="flex-1 px-4 py-7 sm:px-6 lg:px-10 lg:py-9">
+        <main className="min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-7 lg:px-10 lg:py-9">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
