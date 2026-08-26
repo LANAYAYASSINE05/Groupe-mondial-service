@@ -1,4 +1,4 @@
-import { ApiError, type ChecklistDef, type Control, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
+import { ApiError, getToken, type ChecklistDef, type Control, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
 import { CHECKLISTS } from "./mock/checklists";
 import {
   daysAgo,
@@ -13,9 +13,29 @@ function delay(ms = 180) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function requestHeaders(options: RequestInit): Headers {
+  const headers = new Headers();
+  const raw = options.headers;
+  if (raw instanceof Headers) {
+    raw.forEach((value, key) => headers.set(key, value));
+  } else if (Array.isArray(raw)) {
+    for (const [key, value] of raw) headers.set(key, value);
+  } else if (raw && typeof raw === "object") {
+    for (const [key, value] of Object.entries(raw)) {
+      if (value != null) headers.set(key, String(value));
+    }
+  }
+  const stored = getToken();
+  if (stored && !headers.get("Authorization")) {
+    headers.set("Authorization", `Bearer ${stored}`);
+  }
+  return headers;
+}
+
 function authUser(headers: Headers): User {
   const auth = headers.get("Authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const fromHeader = auth.startsWith("Bearer ") ? auth.slice(7) : auth;
+  const token = fromHeader || getToken();
   const user = parseMockToken(token);
   if (!user) throw new ApiError("Non authentifié.", 401);
   return user;
@@ -250,6 +270,7 @@ export async function mockApi<T>(
   const url = new URL(path, "http://mock.local");
   const pathname = url.pathname;
   const params = url.searchParams;
+  const reqHeaders = requestHeaders(options);
   let body: Record<string, unknown> = {};
   if (options.body && typeof options.body === "string") {
     try {
@@ -271,11 +292,11 @@ export async function mockApi<T>(
   }
 
   if (pathname === "/api/auth/me" && method === "GET") {
-    const user = enrichUser(authUser(new Headers(options.headers)), s);
+    const user = enrichUser(authUser(reqHeaders), s);
     return { user } as T;
   }
 
-  const user = authUser(new Headers(options.headers));
+  const user = authUser(reqHeaders);
 
   // Checklists
   const checklistMatch = pathname.match(/^\/api\/checklists\/(audit|passager)$/);

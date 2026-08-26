@@ -20,13 +20,8 @@ import {
   IconUsers,
   IconClipboard,
 } from "@/components/Icons";
-import {
-  api,
-  ApiError,
-  formatDate,
-  formTypeLabel,
-  type Control,
-} from "@/lib/api-client";
+import { api, ApiError, formatDate, formTypeLabel, type Control } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast";
 
 type FormBreakdown = {
@@ -118,8 +113,11 @@ export default function AdminDashboardPage() {
   } | null>(null);
   const [geoOnly, setGeoOnly] = useState(false);
   const { push } = useToast();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
+    if (loading || !user) return;
+    let cancelled = false;
     Promise.all([
       api<{
         kpis: ReportKpis;
@@ -133,6 +131,7 @@ export default function AdminDashboardPage() {
       }>("/api/reports/map"),
     ])
       .then(([report, map]) => {
+        if (cancelled) return;
         setKpis(report.kpis);
         setSummaries(report.summaries);
         setRecent((report.controls || []).slice(0, 8));
@@ -143,13 +142,17 @@ export default function AdminDashboardPage() {
           totalControls: map.stats.totalControls,
         });
       })
-      .catch((err) =>
+      .catch((err) => {
+        if (cancelled) return;
         push(
           err instanceof ApiError ? err.message : "Chargement impossible.",
           "error"
-        )
-      );
-  }, [push]);
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, push]);
 
   const conformiteBars = useMemo<HistogramBar[]>(() => {
     if (!kpis) return [];

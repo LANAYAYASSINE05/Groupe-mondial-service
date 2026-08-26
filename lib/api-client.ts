@@ -150,16 +150,21 @@ export async function api<T>(
   }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
+  const headerInit: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    headerInit[key] = value;
+  });
+
   if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
     const { mockApi } = await import("@/lib/mock-api");
-    return mockApi<T>(path, { ...options, headers });
+    return mockApi<T>(path, { ...options, headers: headerInit });
   }
 
   let res: Response;
   try {
     res = await fetch(`${getApiBaseUrl()}${path}`, {
       ...options,
-      headers,
+      headers: headerInit,
     });
   } catch {
     throw new ApiError(

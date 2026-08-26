@@ -35,10 +35,11 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<MineStats | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     api<{ stats: MineStats }>("/api/stats/mine")
       .then((d) => setStats(d.stats))
       .catch(() => {});
-  }, []);
+  }, [user]);
 
   const conformes = stats
     ? Math.max(0, stats.total - stats.anomalies)
