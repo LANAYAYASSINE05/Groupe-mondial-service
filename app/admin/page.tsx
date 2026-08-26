@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
 import { HistogramChart, type HistogramBar } from "@/components/HistogramChart";
+import { DonutChart } from "@/components/DonutChart";
 import { QuickActionList } from "@/components/QuickActionList";
 import {
   ControlsMap,
@@ -253,6 +254,84 @@ export default function AdminDashboardPage() {
             />
           </div>
         </DashPanel>
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="gms-eyebrow">Statistiques</p>
+            <h3 className="mt-1 font-display text-lg text-mist">
+              Répartition circulaire
+            </h3>
+            <p className="mt-1 text-sm text-mute">
+              Vue globale conformité, types de contrôle et anomalies.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <DashPanel title="Conformité">
+            <DonutChart
+              slices={[
+                {
+                  label: "Conformes",
+                  value: Math.max(0, (kpis?.total ?? 0) - (kpis?.anomalies ?? 0)),
+                  color: "#3d8f6e",
+                },
+                {
+                  label: "Anomalies",
+                  value: kpis?.anomalies ?? 0,
+                  color: "#D13A34",
+                },
+              ]}
+              centerValue={
+                kpis && kpis.total > 0
+                  ? `${Math.round(((kpis.total - kpis.anomalies) / kpis.total) * 100)} %`
+                  : "—"
+              }
+              centerLabel="conformes"
+              emptyLabel="Aucun contrôle enregistré."
+            />
+          </DashPanel>
+          <DashPanel title="Type de contrôle">
+            <DonutChart
+              slices={[
+                {
+                  label: "Audit",
+                  value: kpis?.audit ?? 0,
+                  color: "#8D2A26",
+                },
+                {
+                  label: "Passager",
+                  value: kpis?.passager ?? 0,
+                  color: "#1A6F9A",
+                },
+              ]}
+              centerValue={String(kpis?.total ?? 0)}
+              centerLabel="contrôles"
+              emptyLabel="Aucun contrôle enregistré."
+            />
+          </DashPanel>
+          <DashPanel title="Anomalies">
+            <DonutChart
+              slices={[
+                {
+                  label: "Audit",
+                  value: summaries?.byFormType?.audit?.anomalies ?? 0,
+                  color: "#8D2A26",
+                },
+                {
+                  label: "Passager",
+                  value: summaries?.byFormType?.passager?.anomalies ?? 0,
+                  color: "#1A6F9A",
+                },
+              ]}
+              centerValue={String(kpis?.anomalies ?? 0)}
+              centerLabel="écarts"
+              emptyLabel="Aucune anomalie."
+            />
+          </DashPanel>
+        </div>
       </div>
 
       <div className="mt-6">

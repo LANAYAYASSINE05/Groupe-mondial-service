@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
+import { DonutChart } from "@/components/DonutChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
@@ -64,6 +65,49 @@ export default function StatsPage() {
             <KpiTile label="Taux anomalie" value={`${rate} %`} />
             <KpiTile label="Audits" value={stats.audit} tone="audit" />
             <KpiTile label="Passagers" value={stats.passager} tone="passager" />
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <DashPanel title="Conformité">
+              <DonutChart
+                slices={[
+                  {
+                    label: "Conformes",
+                    value: Math.max(0, stats.total - stats.anomalies),
+                    color: "#3d8f6e",
+                  },
+                  {
+                    label: "Anomalies",
+                    value: stats.anomalies,
+                    color: "#D13A34",
+                  },
+                ]}
+                centerValue={
+                  stats.total > 0
+                    ? `${Math.round(((stats.total - stats.anomalies) / stats.total) * 100)} %`
+                    : "—"
+                }
+                centerLabel="conformes"
+              />
+            </DashPanel>
+            <DashPanel title="Type de contrôle">
+              <DonutChart
+                slices={[
+                  {
+                    label: "Audit",
+                    value: stats.audit,
+                    color: "#8D2A26",
+                  },
+                  {
+                    label: "Passager",
+                    value: stats.passager,
+                    color: "#1A6F9A",
+                  },
+                ]}
+                centerValue={String(stats.total)}
+                centerLabel="contrôles"
+              />
+            </DashPanel>
           </div>
 
           <div className="mt-6">
