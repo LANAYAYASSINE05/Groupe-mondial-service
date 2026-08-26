@@ -1,0 +1,47 @@
+import type { ChecklistDef, FormType } from "@/lib/api-client";
+
+export const CHECKLISTS: Record<FormType, ChecklistDef> = {
+  audit: {
+    formType: "audit",
+    title: "Contrôle audit",
+    explanationLabel: "Explication des résultats & propositions",
+    items: [
+      { key: "qualite_presentation", label: "Qualité de présentation", allowNa: false },
+      { key: "tenue", label: "Tenue vestimentaire", allowNa: false },
+      { key: "attitude", label: "Attitude", allowNa: false },
+      { key: "assiduite", label: "Assiduité", allowNa: false },
+      { key: "application_consignes", label: "Application des consignes", allowNa: false },
+      { key: "qualite_prestation", label: "Qualité de la prestation", allowNa: false },
+      { key: "registres", label: "Registres (État, Renseignement,…)", allowNa: false },
+      { key: "gestion_badges", label: "Gestion des badges", allowNa: false },
+      { key: "gestion_cles", label: "Gestion des clés", allowNa: false },
+      { key: "verification_cameras", label: "Vérification des caméras", allowNa: false },
+      { key: "horaire_ronde", label: "Respect d'horaire de ronde", allowNa: false },
+      { key: "calendrier_vaccinations_chiens", label: "Respect du calendrier des vaccinations de chiens", allowNa: false },
+      { key: "moyen_materiel", label: "Moyen matériel", allowNa: false },
+      { key: "miroir", label: "Miroir", allowNa: false },
+      { key: "etat_telephone", label: "État de téléphone", allowNa: false },
+      { key: "etat_talkie_walkie", label: "État de talkie-walkie", allowNa: false },
+      { key: "etat_cogard", label: "État cogard", allowNa: false },
+      { key: "etat_lampes_torches", label: "État lampes torches", allowNa: false },
+      { key: "etat_detecteurs_metaux", label: "État détecteurs de métaux", allowNa: false },
+      { key: "guerites", label: "Guérites (Organisation ; propreté)", allowNa: false },
+      { key: "poste_garde", label: "Poste de garde (Organisation ; propreté)", allowNa: false },
+      { key: "etat_niche", label: "État de niche", allowNa: false },
+    ],
+  },
+  passager: {
+    formType: "passager",
+    title: "Contrôle passager",
+    explanationLabel: "Explication des résultats & propositions",
+    items: [
+      { key: "passager_identite", label: "Identité / badge", allowNa: false },
+      { key: "passager_acces", label: "Accès zone autorisée", allowNa: false },
+      { key: "passager_comportement", label: "Comportement", allowNa: false },
+      { key: "passager_consignes", label: "Respect des consignes", allowNa: false },
+      { key: "passager_epi", label: "Équipement de protection", allowNa: false },
+      { key: "passager_circulation", label: "Zone de circulation", allowNa: false },
+      { key: "passager_remarques", label: "Remarques terrain", allowNa: false },
+    ],
+  },
+};
