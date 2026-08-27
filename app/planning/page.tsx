@@ -6,29 +6,24 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import {
+  WeekBoard,
+  formatPlanHours,
+  planStatusTone,
+} from "@/components/WeekBoard";
+import {
   api,
   ApiError,
-  formatDate,
   planStatusLabel,
   type PlannedControl,
   type PlanStatus,
 } from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
 
-type WeekRow = {
-  establishmentId: string;
-  siteName: string;
-  clientName: string;
-  byDay: (PlannedControl | null)[];
-  reportRefs: { id: string; label: string }[];
-};
-
 type WeekPayload = {
   weekStart: string;
   weekEnd: string;
   dayLabels: string[];
   plans: PlannedControl[];
-  rows: WeekRow[];
   kpis: {
     total: number;
     planifie: number;
@@ -45,11 +40,7 @@ function shiftWeek(weekStart: string, deltaDays: number) {
 }
 
 function statusTone(status: PlanStatus) {
-  if (status === "termine") return "bg-ok/20 text-ok border-ok/40";
-  if (status === "en_cours") return "bg-gold/20 text-gold border-gold/40";
-  if (status === "non_effectue")
-    return "bg-brand/20 text-brand-light border-brand/40";
-  return "bg-surface text-mist border-line";
+  return planStatusTone(status);
 }
 
 export default function ControllerPlanningPage() {
@@ -125,32 +116,31 @@ export default function ControllerPlanningPage() {
           </div>
         ) : null}
 
-        <DashPanel title="Mes créneaux">
-          <ul className="divide-y divide-line">
-            {!week || week.plans.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-mute">
-                Aucune affectation cette semaine.
-              </li>
-            ) : (
-              week.plans.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-mist">
+        <DashPanel title="Planning de la semaine">
+          {!week ? (
+            <p className="px-4 py-8 text-center text-sm text-mute">Chargement…</p>
+          ) : (
+            <WeekBoard
+              weekStart={week.weekStart}
+              dayLabels={week.dayLabels}
+              plans={week.plans}
+            >
+              {(p) => (
+                <article className="border border-line bg-surface/40 p-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-mist">
                       {p.establishment.name}
-                      {p.clientName ? (
-                        <span className="text-mute"> · {p.clientName}</span>
-                      ) : null}
                     </p>
-                    <p className="mt-1 text-xs text-mute">
-                      {p.dayLabel} · {formatDate(p.plannedAt)}
-                      {" → "}
-                      {formatDate(p.plannedUntil || p.plannedAt)}
+                    {p.clientName ? (
+                      <p className="truncate text-[0.7rem] text-mute">
+                        {p.clientName}
+                      </p>
+                    ) : null}
+                    <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
+                      {formatPlanHours(p)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded border px-2 py-0.5 text-[0.65rem] uppercase tracking-wide ${statusTone(p.status)}`}
                     >
@@ -159,85 +149,24 @@ export default function ControllerPlanningPage() {
                     {p.status !== "termine" && p.status !== "non_effectue" ? (
                       <Link
                         href="/controls/new"
-                        className="text-sm text-gold hover:underline"
+                        className="text-xs text-gold hover:underline"
                       >
                         Faire le contrôle
                       </Link>
                     ) : p.controlId ? (
                       <Link
                         href={`/controls/${p.controlId}`}
-                        className="text-sm text-gold hover:underline"
+                        className="text-xs text-gold hover:underline"
                       >
                         Voir rapport
                       </Link>
                     ) : null}
                   </div>
-                </li>
-              ))
-            )}
-          </ul>
+                </article>
+              )}
+            </WeekBoard>
+          )}
         </DashPanel>
-
-        <div className="hidden md:block">
-          <DashPanel title="Vue hebdomadaire">
-            <div className="overflow-x-auto p-2">
-              <table className="min-w-[900px] w-full border-collapse text-sm">
-              <thead>
-                <tr className="bg-surface/80 text-[0.65rem] uppercase tracking-[0.1em] text-mute">
-                  <th className="border border-line px-3 py-2 text-left">
-                    Site
-                  </th>
-                  {(week?.dayLabels ?? []).map((d) => (
-                    <th
-                      key={d}
-                      className="border border-line px-2 py-2 text-center"
-                    >
-                      {d}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {!week || week.rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="border border-line px-4 py-6 text-center text-mute"
-                    >
-                      —
-                    </td>
-                  </tr>
-                ) : (
-                  week.rows.map((row) => (
-                    <tr key={`${row.establishmentId}-${row.clientName}`}>
-                      <td className="border border-line px-3 py-2">
-                        {row.siteName}
-                      </td>
-                      {row.byDay.map((plan, i) => (
-                        <td
-                          key={i}
-                          className="border border-line px-2 py-2 text-center"
-                        >
-                          {plan ? (
-                            <span
-                              className={`inline-block rounded border px-2 py-0.5 text-[0.65rem] ${statusTone(plan.status)}`}
-                            >
-                              {new Date(plan.plannedAt).toLocaleTimeString(
-                                "fr-FR",
-                                { hour: "2-digit", minute: "2-digit" }
-                              )}
-                            </span>
-                          ) : null}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-            </div>
-          </DashPanel>
-        </div>
       </div>
     </AppShell>
   );

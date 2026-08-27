@@ -8,6 +8,11 @@ import { FieldLabel, Input, Select, Textarea } from "@/components/Field";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import {
+  WeekBoard,
+  formatPlanHours,
+  planStatusTone,
+} from "@/components/WeekBoard";
+import {
   api,
   ApiError,
   formatDate,
@@ -19,20 +24,11 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
 
-type WeekRow = {
-  establishmentId: string;
-  siteName: string;
-  clientName: string;
-  byDay: (PlannedControl | null)[];
-  reportRefs: { id: string; label: string }[];
-};
-
 type WeekPayload = {
   weekStart: string;
   weekEnd: string;
   dayLabels: string[];
   plans: PlannedControl[];
-  rows: WeekRow[];
   kpis: {
     total: number;
     planifie: number;
@@ -94,10 +90,7 @@ function fromLocalInputValue(local: string) {
 }
 
 function statusTone(status: PlanStatus) {
-  if (status === "termine") return "bg-ok/20 text-ok border-ok/40";
-  if (status === "en_cours") return "bg-gold/20 text-gold border-gold/40";
-  if (status === "non_effectue") return "bg-brand/20 text-brand-light border-brand/40";
-  return "bg-surface text-mist border-line";
+  return planStatusTone(status);
 }
 
 function ControllerMultiSelect({
@@ -505,73 +498,81 @@ export default function AdminPlanningPage() {
         </DashPanel>
 
         <DashPanel title="Planning de la semaine">
-          <div className="space-y-3 p-4 lg:hidden">
-            {!week || week.plans.length === 0 ? (
-              <p className="py-6 text-center text-sm text-mute">
-                Aucun contrôle planifié pour cette semaine.
-              </p>
-            ) : (
-              week.plans.map((plan) => (
-                <article
-                  key={plan.id}
-                  className="space-y-2 border border-line bg-surface/40 p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium text-mist">
-                        {plan.establishment.name}
+          {!week ? (
+            <p className="px-4 py-8 text-center text-sm text-mute">Chargement…</p>
+          ) : (
+            <WeekBoard
+              weekStart={week.weekStart}
+              dayLabels={week.dayLabels}
+              plans={week.plans}
+            >
+              {(plan) => (
+                <article className="border border-line bg-surface/40 p-3">
+                  <button
+                    type="button"
+                    className="min-w-0 w-full text-left"
+                    onClick={() => {
+                      setHistorySiteId(plan.establishmentId);
+                      void refreshHistory(plan.establishmentId);
+                    }}
+                  >
+                    <p className="truncate font-medium text-mist">
+                      {plan.establishment.name}
+                    </p>
+                    {plan.clientName ? (
+                      <p className="truncate text-[0.7rem] text-mute">
+                        {plan.clientName}
                       </p>
-                      <p className="mt-0.5 text-xs text-mute">
-                        {plan.dayLabel} · {formatDate(plan.plannedAt)}
-                        {" → "}
-                        {formatDate(plan.plannedUntil || plan.plannedAt)}
-                      </p>
-                    </div>
-                    <select
-                      className={`shrink-0 rounded border px-2 py-1 text-[0.65rem] ${statusTone(plan.status)}`}
-                      value={plan.status}
-                      onChange={(e) =>
-                        updateStatus(plan.id, e.target.value as PlanStatus)
-                      }
-                      aria-label="État du contrôle"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {planStatusLabel(s)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <p className="text-xs text-mute">
-                    {plan.assignees.map((a) => a.name).join(", ") || "—"}
+                    ) : null}
+                    <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
+                      {formatPlanHours(plan)}
+                    </p>
+                  </button>
+                  <p className="mt-1.5 truncate text-xs text-mute">
+                    {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ") ||
+                      "—"}
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${statusTone(plan.status)}`}
+                    value={plan.status}
+                    onChange={(e) =>
+                      updateStatus(plan.id, e.target.value as PlanStatus)
+                    }
+                    aria-label="État du contrôle"
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {planStatusLabel(s)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {plan.control ? (
                       <Link
                         href={`/controls/${plan.control.id}`}
                         className="text-xs text-gold hover:underline"
                       >
-                        Voir le rapport
+                        Rapport
                       </Link>
                     ) : (
                       <form
-                        className="flex min-w-0 flex-1 gap-2"
+                        className="flex min-w-0 flex-1 gap-1.5"
                         onSubmit={(e) => {
                           e.preventDefault();
                           const fd = new FormData(e.currentTarget);
-                          linkControl(plan.id, String(fd.get("ref") || ""));
+                          void linkControl(plan.id, String(fd.get("ref") || ""));
                           e.currentTarget.reset();
                         }}
                       >
                         <input
                           name="ref"
-                          placeholder="UUID rapport"
-                          className="gms-field min-h-9 flex-1 px-2 py-1 text-xs"
+                          placeholder="UUID"
+                          className="gms-field min-h-8 flex-1 px-2 py-1 text-[0.65rem]"
                           aria-label="Référence rapport"
                         />
                         <button
                           type="submit"
-                          className="text-xs text-gold hover:underline"
+                          className="shrink-0 text-xs text-gold hover:underline"
                         >
                           Lier
                         </button>
@@ -579,118 +580,16 @@ export default function AdminPlanningPage() {
                     )}
                     <button
                       type="button"
-                      className="text-xs text-mute hover:text-brand"
-                      onClick={() => removePlan(plan.id)}
+                      className="ml-auto text-xs text-mute hover:text-brand"
+                      onClick={() => void removePlan(plan.id)}
                     >
                       Suppr.
                     </button>
                   </div>
                 </article>
-              ))
-            )}
-            <p className="text-center text-[0.65rem] text-mute">
-              Vue tableau disponible sur écran large.
-            </p>
-          </div>
-          <div className="hidden overflow-x-auto p-2 lg:block">
-            <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-surface/80 text-[0.65rem] uppercase tracking-[0.1em] text-mute">
-                  <th className="border border-line px-3 py-2">Site</th>
-                  <th className="border border-line px-3 py-2">Client</th>
-                  {(week?.dayLabels ?? []).map((day) => (
-                    <th
-                      key={day}
-                      colSpan={2}
-                      className="border border-line px-2 py-2 text-center"
-                    >
-                      {day}
-                    </th>
-                  ))}
-                  <th className="border border-line px-3 py-2">
-                    Réf. rapport
-                  </th>
-                </tr>
-                <tr className="bg-surface text-[0.6rem] uppercase tracking-[0.08em] text-mute">
-                  <th className="border border-line" />
-                  <th className="border border-line" />
-                  {(week?.dayLabels ?? []).flatMap((day) => [
-                    <th
-                      key={`${day}-p`}
-                      className="border border-line px-1 py-1 text-center font-normal"
-                    >
-                      Planifié
-                    </th>,
-                    <th
-                      key={`${day}-r`}
-                      className="border border-line px-1 py-1 text-center font-normal"
-                    >
-                      Réalisé
-                    </th>,
-                  ])}
-                  <th className="border border-line" />
-                </tr>
-              </thead>
-              <tbody>
-                {!week || week.rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={17}
-                      className="border border-line px-4 py-8 text-center text-mute"
-                    >
-                      Aucun contrôle planifié pour cette semaine.
-                    </td>
-                  </tr>
-                ) : (
-                  week.rows.map((row) => (
-                    <tr key={`${row.establishmentId}-${row.clientName}`}>
-                      <td className="border border-line px-3 py-2 align-top">
-                        <button
-                          type="button"
-                          className="text-left font-medium text-mist hover:text-gold"
-                          onClick={() => {
-                            setHistorySiteId(row.establishmentId);
-                            refreshHistory(row.establishmentId);
-                          }}
-                        >
-                          {row.siteName}
-                        </button>
-                      </td>
-                      <td className="border border-line px-3 py-2 align-top text-mute">
-                        {row.clientName || "—"}
-                      </td>
-                      {row.byDay.map((plan, dayIdx) => (
-                        <DayCells
-                          key={dayIdx}
-                          plan={plan}
-                          onStatus={updateStatus}
-                          onLink={linkControl}
-                          onDelete={removePlan}
-                        />
-                      ))}
-                      <td className="border border-line px-2 py-2 align-top">
-                        <div className="flex flex-col gap-1">
-                          {row.reportRefs.length === 0 ? (
-                            <span className="text-mute">—</span>
-                          ) : (
-                            row.reportRefs.map((r) => (
-                              <Link
-                                key={r.id}
-                                href={`/controls/${r.id}`}
-                                className="font-mono text-xs text-gold hover:underline"
-                              >
-                                {r.label}
-                              </Link>
-                            ))
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              )}
+            </WeekBoard>
+          )}
         </DashPanel>
 
         <DashPanel title="Historique par site">
@@ -796,101 +695,3 @@ export default function AdminPlanningPage() {
   );
 }
 
-function DayCells({
-  plan,
-  onStatus,
-  onLink,
-  onDelete,
-}: {
-  plan: PlannedControl | null;
-  onStatus: (id: string, status: PlanStatus) => void;
-  onLink: (id: string, controlId: string) => void;
-  onDelete: (id: string) => void;
-}) {
-  if (!plan) {
-    return (
-      <>
-        <td className="border border-line bg-surface/60 px-1 py-2" />
-        <td className="border border-line bg-surface/60 px-1 py-2" />
-      </>
-    );
-  }
-
-  const timeFrom = new Date(plan.plannedAt).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const timeUntil = new Date(plan.plannedUntil || plan.plannedAt).toLocaleTimeString(
-    "fr-FR",
-    { hour: "2-digit", minute: "2-digit" }
-  );
-  const realized =
-    plan.status === "termine" || plan.control
-      ? new Date(plan.control?.createdAt || plan.updatedAt).toLocaleString(
-          "fr-FR",
-          { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }
-        )
-      : "";
-
-  return (
-    <>
-      <td className="border border-line px-1 py-1.5 align-top">
-        <div className="space-y-1">
-          <p className="text-center text-xs text-mist">
-            {timeFrom}–{timeUntil}
-          </p>
-          <p className="truncate text-center text-[0.65rem] text-mute">
-            {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ")}
-          </p>
-          <select
-            className={`w-full rounded border px-1 py-0.5 text-[0.6rem] ${statusTone(plan.status)}`}
-            value={plan.status}
-            onChange={(e) => onStatus(plan.id, e.target.value as PlanStatus)}
-            aria-label="État du contrôle"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {planStatusLabel(s)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="block w-full text-center text-[0.6rem] text-mute hover:text-brand"
-            onClick={() => onDelete(plan.id)}
-          >
-            Suppr.
-          </button>
-        </div>
-      </td>
-      <td className="border border-line px-1 py-1.5 align-top">
-        {realized ? (
-          <p className="text-center text-xs text-ok">{realized}</p>
-        ) : (
-          <form
-            className="space-y-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              onLink(plan.id, String(fd.get("ref") || ""));
-              e.currentTarget.reset();
-            }}
-          >
-            <input
-              name="ref"
-              placeholder="UUID rapport"
-              className="gms-field w-full px-1 py-0.5 text-[0.6rem]"
-              aria-label="Référence rapport"
-            />
-            <button
-              type="submit"
-              className="block w-full text-center text-[0.6rem] text-gold hover:underline"
-            >
-              Lier
-            </button>
-          </form>
-        )}
-      </td>
-    </>
-  );
-}
