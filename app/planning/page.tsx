@@ -15,6 +15,8 @@ import {
   api,
   ApiError,
   currentMonthISO,
+  effectivePlanDate,
+  isPlanRescheduled,
   localDateISO,
   mondayOfDate,
   monthLabel,
@@ -57,6 +59,12 @@ function statusTone(status: PlanStatus) {
 }
 
 function PlanCard({ p }: { p: PlannedControl }) {
+  const today = localDateISO();
+  const effective = effectivePlanDate(p);
+  const rescheduled = isPlanRescheduled(p);
+  const canDoControl = !p.controlId && p.status !== "non_effectue" && effective === today;
+  const canReschedule = !p.controlId && p.status !== "non_effectue";
+
   return (
     <article className="border border-line bg-surface/40 p-3">
       <div className="min-w-0">
@@ -67,6 +75,24 @@ function PlanCard({ p }: { p: PlannedControl }) {
         <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
           {formatPlanHours(p)}
         </p>
+        {rescheduled && p.reportedAt ? (
+          <p className="mt-1 text-[0.65rem] text-gold">
+            Reporté au{" "}
+            {new Date(p.reportedAt).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "short",
+            })}
+          </p>
+        ) : null}
+        {canReschedule && !canDoControl && effective !== today ? (
+          <p className="mt-1 text-[0.65rem] text-mute">
+            Checklist le{" "}
+            {new Date(`${effective}T12:00:00`).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "short",
+            })}
+          </p>
+        ) : null}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span
@@ -74,12 +100,20 @@ function PlanCard({ p }: { p: PlannedControl }) {
         >
           {planStatusLabel(p.status)}
         </span>
-        {p.status !== "non_effectue" && !p.controlId ? (
+        {canReschedule ? (
+          <Link
+            href={`/planning/reschedule?planId=${encodeURIComponent(p.id)}`}
+            className="text-xs font-medium text-mute hover:text-mist hover:underline"
+          >
+            Reporter à une autre date
+          </Link>
+        ) : null}
+        {canDoControl ? (
           <Link
             href={`/controls/new?planId=${encodeURIComponent(p.id)}`}
             className="text-xs font-medium text-gold hover:underline"
           >
-            Reporter le contrôle
+            Effectuer le contrôle
           </Link>
         ) : p.controlId ? (
           <Link

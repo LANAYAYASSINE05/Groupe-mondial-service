@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -7,8 +8,10 @@ import { Button } from "@/components/Button";
 import { IconPassager, IconShield } from "@/components/Icons";
 import {
   api,
+  effectivePlanDate,
+  formatDayHeading,
   formTypeLabel,
-  formatDate,
+  localDateISO,
   type FormType,
   type PlannedControl,
 } from "@/lib/api-client";
@@ -54,14 +57,33 @@ function NewControlChoiceInner() {
   const planId = search.get("planId") || "";
   const [formType, setFormType] = useState<FormType | "">("");
   const [plan, setPlan] = useState<PlannedControl | null>(null);
+  const [planBlocked, setPlanBlocked] = useState<string | null>(null);
 
   useEffect(() => {
     if (!planId) {
       setPlan(null);
+      setPlanBlocked(null);
       return;
     }
     api<{ plan: PlannedControl }>(`/api/planning/${planId}`)
-      .then((d) => setPlan(d.plan))
+      .then((d) => {
+        const p = d.plan;
+        if (p.controlId) {
+          setPlanBlocked("Ce créneau est déjà terminé.");
+          setPlan(p);
+          return;
+        }
+        const effective = effectivePlanDate(p);
+        if (effective !== localDateISO()) {
+          setPlanBlocked(
+            `La checklist n’est disponible que le ${formatDayHeading(effective)}. Utilisez « Reporter à une autre date » si besoin.`
+          );
+          setPlan(p);
+          return;
+        }
+        setPlanBlocked(null);
+        setPlan(p);
+      })
       .catch((err) => {
         push(
           err instanceof Error ? err.message : "Créneau introuvable.",
@@ -90,15 +112,31 @@ function NewControlChoiceInner() {
         {plan ? (
           <div className="mt-4 border border-gold/30 bg-gold/5 px-4 py-3">
             <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-gold">
-              Reportation du créneau planifié
+              Créneau du jour
             </p>
             <p className="mt-1 font-medium text-mist">
               {plan.establishment.name}
             </p>
-            <p className="text-sm text-mute">
-              {formatDate(plan.plannedAt)}
-              {plan.clientName ? ` · ${plan.clientName}` : ""}
-            </p>
+            {plan.clientName ? (
+              <p className="text-sm text-mute">{plan.clientName}</p>
+            ) : null}
+            {planBlocked ? (
+              <>
+                <p className="mt-2 text-sm text-brand">{planBlocked}</p>
+                {planId ? (
+                  <Link
+                    href={`/planning/reschedule?planId=${encodeURIComponent(planId)}`}
+                    className="mt-2 inline-block text-sm font-medium text-gold hover:underline"
+                  >
+                    Reporter à une autre date
+                  </Link>
+                ) : null}
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-mute">
+                Choisissez Audit ou Passager pour ouvrir la checklist.
+              </p>
+            )}
           </div>
         ) : (
           <p className="mt-2 text-sm leading-relaxed text-mute">
@@ -197,7 +235,7 @@ function NewControlChoiceInner() {
             <Button
               type="submit"
               className="min-h-14 w-full text-base"
-              disabled={!formType}
+              disabled={!formType || Boolean(planBlocked)}
             >
               Continuer vers la checklist
             </Button>

@@ -18,6 +18,7 @@ import {
   ApiError,
   currentMonthISO,
   formatDate,
+  isPlanRescheduled,
   localDateISO,
   mondayOfDate,
   monthLabel,
@@ -446,11 +447,18 @@ export default function AdminPlanningPage() {
           {plan.control ? (
             <div className="w-full border border-gold/30 bg-gold/5 px-2 py-2">
               <p className="font-display text-[0.58rem] uppercase tracking-[0.12em] text-gold">
-                Reportation
+                Contrôle réalisé
               </p>
               <p className="mt-0.5 text-xs text-mist">
                 {plan.control.userName || "Contrôleur"}
                 {plan.control.anomaly ? " · anomalie" : " · conforme"}
+              </p>
+              <p className="mt-1 text-[0.65rem] text-mute">
+                Planifié {formatDate(plan.plannedAt)}
+                {isPlanRescheduled(plan) && plan.reportedAt
+                  ? ` · Reporté ${formatDate(plan.reportedAt)}`
+                  : ""}
+                {" · "}Rapport {formatDate(plan.control.createdAt)}
               </p>
               <Link
                 href={`/controls/${plan.control.id}`}
@@ -458,6 +466,18 @@ export default function AdminPlanningPage() {
               >
                 Ouvrir le rapport
               </Link>
+            </div>
+          ) : isPlanRescheduled(plan) && plan.reportedAt ? (
+            <div className="w-full border border-gold/30 bg-gold/5 px-2 py-2">
+              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em] text-gold">
+                Reportation
+              </p>
+              <p className="mt-0.5 text-xs text-mist">
+                Planifié {formatDate(plan.plannedAt)}
+              </p>
+              <p className="mt-1 text-[0.65rem] text-mute">
+                Reporté au {formatDate(plan.reportedAt)} · en attente de contrôle
+              </p>
             </div>
           ) : (
             <form
@@ -784,15 +804,29 @@ export default function AdminPlanningPage() {
                             {p.assignees.map((a) => a.name).join(", ")}
                           </p>
                           {p.control ? (
-                            <Link
-                              href={`/controls/${p.control.id}`}
-                              className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
-                            >
-                              Voir la reportation
-                            </Link>
+                            <>
+                              <p className="mt-1 text-[0.65rem] text-mute">
+                                Planifié {formatDate(p.plannedAt)}
+                                {isPlanRescheduled(p) && p.reportedAt
+                                  ? ` · Reporté ${formatDate(p.reportedAt)}`
+                                  : ""}
+                                {" · "}Rapport {formatDate(p.control.createdAt)}
+                              </p>
+                              <Link
+                                href={`/controls/${p.control.id}`}
+                                className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
+                              >
+                                Voir le rapport
+                              </Link>
+                            </>
+                          ) : isPlanRescheduled(p) && p.reportedAt ? (
+                            <p className="mt-1 text-xs text-gold">
+                              Reporté au {formatDate(p.reportedAt)} · en attente
+                              de contrôle
+                            </p>
                           ) : (
                             <p className="mt-1 text-xs text-mute">
-                              En attente de reportation
+                              En attente
                             </p>
                           )}
                         </li>

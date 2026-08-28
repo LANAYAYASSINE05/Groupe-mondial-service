@@ -237,6 +237,24 @@ function attachControlToPlan(
   };
 }
 
+function parseReportedAt(raw?: unknown): string {
+  const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (typeof raw === "string" && isoDateRe.test(raw.trim())) {
+    const now = new Date();
+    const [y, m, d] = raw.trim().split("-").map(Number);
+    return new Date(
+      y,
+      m - 1,
+      d,
+      now.getHours(),
+      now.getMinutes(),
+      0,
+      0
+    ).toISOString();
+  }
+  return new Date().toISOString();
+}
+
 function findOpenPlanForSite(
   s: MockStore,
   user: User,
@@ -251,7 +269,7 @@ function findOpenPlanForSite(
       canAccessPlan(p, user)
   );
   const sameDay = open.filter(
-    (p) => localDateISO(new Date(p.plannedAt)) === today
+    (p) => localDateISO(new Date(p.reportedAt ?? p.plannedAt)) === today
   );
   const pool = sameDay.length ? sameDay : open;
   return [...pool].sort((a, b) => a.plannedAt.localeCompare(b.plannedAt))[0];
@@ -269,7 +287,13 @@ function planKpis(plans: PlannedControl[]) {
 
 function buildMonthPayload(s: MockStore, month: string, user: User) {
   const plans = scopePlans(
-    s.plans.filter((p) => localDateISO(new Date(p.plannedAt)).startsWith(month)),
+    s.plans.filter((p) => {
+      const plannedInMonth = localDateISO(new Date(p.plannedAt)).startsWith(month);
+      const reportedInMonth =
+        p.reportedAt != null &&
+        localDateISO(new Date(p.reportedAt)).startsWith(month);
+      return plannedInMonth || reportedInMonth;
+    }),
     user
   ).sort((a, b) => a.plannedAt.localeCompare(b.plannedAt));
   return {
@@ -549,6 +573,18 @@ export async function mockApi<T>(
           400
         );
       }
+      if (planToLink.controlId) {
+        throw new ApiError("Ce créneau a déjà un rapport.", 400);
+      }
+      const effective = localDateISO(
+        new Date(planToLink.reportedAt ?? planToLink.plannedAt)
+      );
+      if (effective !== localDateISO()) {
+        throw new ApiError(
+          "La checklist n’est disponible que le jour du contrôle.",
+          400
+        );
+      }
     } else {
       planToLink = findOpenPlanForSite(s, user, est.id);
     }
@@ -698,8 +734,29 @@ export async function mockApi<T>(
     if (method === "GET") {
       return { plan: current } as T;
     }
-    if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
     if (method === "PUT" || method === "PATCH") {
+      if (user.role !== "admin") {
+        const rescheduleDate =
+          typeof body.reportedAt === "string" ? body.reportedAt.trim() : "";
+        if (!rescheduleDate || !/^\d{4}-\d{2}-\d{2}$/.test(rescheduleDate)) {
+          throw new ApiError("Date de reportation invalide.", 400);
+        }
+        if (current.controlId) {
+          throw new ApiError("Ce créneau est déjà terminé.", 400);
+        }
+        if (current.status === "non_effectue") {
+          throw new ApiError("Créneau non effectué.", 400);
+        }
+        const [y, m, d] = rescheduleDate.split("-").map(Number);
+        const reportedAt = new Date(y, m - 1, d, 12, 0, 0, 0).toISOString();
+        const next: PlannedControl = {
+          ...current,
+          reportedAt,
+          updatedAt: new Date().toISOString(),
+        };
+        s.plans[idx] = next;
+        return { plan: next } as T;
+      }
       let next: PlannedControl = {
         ...current,
         ...(body.status != null ? { status: body.status as PlanStatus } : {}),
@@ -707,6 +764,14 @@ export async function mockApi<T>(
         ...(body.plannedAt != null ? { plannedAt: String(body.plannedAt) } : {}),
         ...(body.plannedUntil != null
           ? { plannedUntil: String(body.plannedUntil) }
+          : {}),
+        ...(body.reportedAt !== undefined
+          ? {
+              reportedAt:
+                body.reportedAt == null || body.reportedAt === ""
+                  ? null
+                  : parseReportedAt(body.reportedAt),
+            }
           : {}),
         updatedAt: new Date().toISOString(),
       };
@@ -730,6 +795,7 @@ export async function mockApi<T>(
       return { plan: next } as T;
     }
     if (method === "DELETE") {
+      if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
       s.plans.splice(idx, 1);
       return undefined as T;
     }

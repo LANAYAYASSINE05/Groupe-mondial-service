@@ -192,7 +192,7 @@ function ControlFormInner() {
       });
       push(
         planId
-          ? "Reportation enregistrée. L’admin la verra sur le planning."
+          ? "Contrôle enregistré et lié au créneau planifié."
           : "Contrôle enregistré."
       );
       router.push(
@@ -268,7 +268,7 @@ function ControlFormInner() {
                     {plan.establishment.name}
                   </p>
                   <p className="text-xs text-mute">
-                    {formatDate(plan.plannedAt)}
+                    Planifié le {formatDate(plan.plannedAt)}
                     {plan.clientName ? ` · ${plan.clientName}` : ""}
                   </p>
                 </div>
@@ -389,11 +389,7 @@ function ControlFormInner() {
               }
               className="min-h-12 w-full sm:w-auto sm:min-w-[14rem]"
             >
-              {busy
-                ? "Enregistrement…"
-                : plan
-                  ? "Valider la reportation"
-                  : "Valider le contrôle"}
+              {busy ? "Enregistrement…" : "Valider le contrôle"}
             </Button>
             {progress < 100 && (
               <p className="text-sm text-mute">

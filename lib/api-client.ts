@@ -77,7 +77,22 @@ export type PlannedControl = {
     createdAt: string;
     userName: string;
   } | null;
+  /** Nouvelle date choisie par le contrôleur (report sans checklist). */
+  reportedAt?: string | null;
 };
+
+/** Date effective du contrôle (reportée ou planifiée). */
+export function effectivePlanDate(plan: PlannedControl) {
+  return localDateISO(new Date(plan.reportedAt ?? plan.plannedAt));
+}
+
+export function isPlanRescheduled(plan: PlannedControl) {
+  if (!plan.reportedAt) return false;
+  return (
+    localDateISO(new Date(plan.reportedAt)) !==
+    localDateISO(new Date(plan.plannedAt))
+  );
+}
 
 export type DayLog = {
   id: string;

@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import {
   formatDayHeading,
+  isPlanRescheduled,
   localDateISO,
   type PlannedControl,
 } from "@/lib/api-client";
@@ -27,10 +28,16 @@ function buildGrid(month: string, plans: PlannedControl[]): GridDay[] {
   const today = localDateISO();
   const byDate = new Map<string, PlannedControl[]>();
   for (const plan of plans) {
-    const key = localDateISO(new Date(plan.plannedAt));
-    const list = byDate.get(key) ?? [];
-    list.push(plan);
-    byDate.set(key, list);
+    const keys = new Set<string>();
+    keys.add(localDateISO(new Date(plan.plannedAt)));
+    if (plan.reportedAt && isPlanRescheduled(plan)) {
+      keys.add(localDateISO(new Date(plan.reportedAt)));
+    }
+    for (const key of keys) {
+      const list = byDate.get(key) ?? [];
+      if (!list.some((p) => p.id === plan.id)) list.push(plan);
+      byDate.set(key, list);
+    }
   }
   for (const list of byDate.values()) {
     list.sort((a, b) => a.plannedAt.localeCompare(b.plannedAt));
