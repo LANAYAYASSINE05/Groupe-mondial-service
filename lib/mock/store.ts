@@ -1,6 +1,7 @@
 import type {
   Control,
   ControlItem,
+  DayLog,
   Establishment,
   FormType,
   ItemState,
@@ -703,8 +704,61 @@ export type MockStore = {
   establishments: Establishment[];
   controls: Control[];
   plans: PlannedControl[];
+  dayLogs: DayLog[];
   userEstablishments: { userId: string; establishmentId: string }[];
 };
+
+function dateOnlyDaysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function buildInitialDayLogs(): DayLog[] {
+  return [
+    {
+      id: "d0000000-0000-4000-8000-000000000001",
+      userId: IDS.amine,
+      date: dateOnlyDaysAgo(0),
+      text: "Matin — audit Tour Horizon, checklist complète, une caméra parking nord hors service. Après-midi — passager Port de Casablanca, RAS. Point à suivre : relance maintenance caméra.",
+      createdAt: daysAgo(0),
+      updatedAt: daysAgo(0),
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000002",
+      userId: IDS.amine,
+      date: dateOnlyDaysAgo(1),
+      text: "Contrôles Entrepôt Nord (audit) et Aéroport (passager). Anomalie registre nuit précédente signalée au chef de poste.",
+      createdAt: daysAgo(1),
+      updatedAt: daysAgo(1),
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000003",
+      userId: IDS.sara,
+      date: dateOnlyDaysAgo(0),
+      text: "Clinique Atlas — contrôle passager. Tenue incomplète à l’accueil, rappel des consignes. Siège : suivi du contrôle en cours.",
+      createdAt: daysAgo(0),
+      updatedAt: daysAgo(0),
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000004",
+      userId: IDS.karim,
+      date: dateOnlyDaysAgo(0),
+      text: "Matin — passager Marina. Après-midi — Tanger Med planifié. RAS sur les accès, un véhicule hors emplacement.",
+      createdAt: daysAgo(0),
+      updatedAt: daysAgo(0),
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000005",
+      userId: IDS.karim,
+      date: dateOnlyDaysAgo(2),
+      text: "Usine Bouskoura : contrôle en cours, consignes ronde 02h non tracées. Relance prévue demain.",
+      createdAt: daysAgo(2),
+      updatedAt: daysAgo(2),
+    },
+  ];
+}
 
 export function createStore(): MockStore {
   return {
@@ -712,6 +766,7 @@ export function createStore(): MockStore {
     establishments: structuredClone(initialEstablishments),
     controls: structuredClone(initialControls),
     plans: structuredClone(buildInitialPlans()),
+    dayLogs: structuredClone(buildInitialDayLogs()),
     userEstablishments: [
       { userId: IDS.amine, establishmentId: IDS.sites[0] },
       { userId: IDS.amine, establishmentId: IDS.sites[1] },
@@ -733,6 +788,9 @@ let store: MockStore | null = null;
 
 export function getStore() {
   if (!store) store = createStore();
+  if (!Array.isArray(store.dayLogs)) {
+    store.dayLogs = structuredClone(buildInitialDayLogs());
+  }
   return store;
 }
 

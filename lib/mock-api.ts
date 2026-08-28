@@ -1,4 +1,4 @@
-import { ApiError, getToken, type ChecklistDef, type Control, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
+import { ApiError, getToken, localDateISO, type ChecklistDef, type Control, type DayLog, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
 import { CHECKLISTS } from "./mock/checklists";
 import {
   daysAgo,
@@ -610,6 +610,74 @@ export async function mockApi<T>(
       s.plans.splice(idx, 1);
       return undefined as T;
     }
+  }
+
+  function enrichDayLog(log: DayLog): DayLog {
+    const u = s.users.find((x) => x.id === log.userId);
+    return {
+      ...log,
+      user: u ? { id: u.id, name: u.name, email: u.email } : undefined,
+    };
+  }
+
+  const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (pathname === "/api/day-logs" && method === "GET") {
+    const date = params.get("date") || localDateISO();
+    const mine = s.dayLogs.filter((l) => l.userId === user.id);
+    const log = mine.find((l) => l.date === date) ?? null;
+    const recent = [...mine]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 20)
+      .map(enrichDayLog);
+    return { log: log ? enrichDayLog(log) : null, recent } as T;
+  }
+
+  if (pathname === "/api/day-logs" && method === "PUT") {
+    const date = String(body.date || "").trim();
+    const text = String(body.text || "").trim();
+    if (!isoDateRe.test(date)) {
+      throw new ApiError("Date invalide.", 400);
+    }
+    if (!text) {
+      throw new ApiError("Le texte de la journée est obligatoire.", 400);
+    }
+    const now = new Date().toISOString();
+    const idx = s.dayLogs.findIndex(
+      (l) => l.userId === user.id && l.date === date
+    );
+    if (idx >= 0) {
+      s.dayLogs[idx] = {
+        ...s.dayLogs[idx],
+        text,
+        updatedAt: now,
+      };
+      return { log: enrichDayLog(s.dayLogs[idx]) } as T;
+    }
+    const created: DayLog = {
+      id: uuid(),
+      userId: user.id,
+      date,
+      text,
+      createdAt: now,
+      updatedAt: now,
+    };
+    s.dayLogs.push(created);
+    return { log: enrichDayLog(created) } as T;
+  }
+
+  if (pathname === "/api/admin/day-logs" && method === "GET") {
+    if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
+    const date = params.get("date");
+    const userId = params.get("userId");
+    let logs = [...s.dayLogs];
+    if (date) logs = logs.filter((l) => l.date === date);
+    if (userId) logs = logs.filter((l) => l.userId === userId);
+    logs.sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
+    );
+    return { logs: logs.map(enrichDayLog) } as T;
   }
 
   // CSV export stub

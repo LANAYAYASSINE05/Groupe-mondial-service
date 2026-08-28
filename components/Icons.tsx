@@ -214,6 +214,16 @@ export function IconCalendar({ className = "h-4 w-4", ...props }: IconProps) {
   );
 }
 
+export function IconJournal({ className = "h-4 w-4", ...props }: IconProps) {
+  return (
+    <svg className={`shrink-0 ${className}`} {...defaults} {...props}>
+      <path d="M6 4h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+      <path d="M8 4v16" />
+      <path d="M12 9h5M12 13h4" />
+    </svg>
+  );
+}
+
 export type NavIconName =
   | "dashboard"
   | "clipboard"
@@ -227,7 +237,8 @@ export type NavIconName =
   | "shield"
   | "passager"
   | "logout"
-  | "calendar";
+  | "calendar"
+  | "journal";
 
 const NAV_ICONS = {
   dashboard: IconDashboard,
@@ -243,6 +254,7 @@ const NAV_ICONS = {
   passager: IconPassager,
   logout: IconLogout,
   calendar: IconCalendar,
+  journal: IconJournal,
 } as const;
 
 export function NavIcon({

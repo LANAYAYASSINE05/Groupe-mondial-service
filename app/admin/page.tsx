@@ -14,6 +14,7 @@ import {
   IconReport,
   IconUsers,
   IconClipboard,
+  IconJournal,
   IconMapPin,
 } from "@/components/Icons";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
@@ -421,6 +422,11 @@ export default function AdminDashboardPage() {
                   href: "/admin/planning",
                   label: "Planning hebdomadaire",
                   icon: IconCalendar,
+                },
+                {
+                  href: "/admin/days",
+                  label: "Compte-rendus de journée",
+                  icon: IconJournal,
                 },
                 {
                   href: "/admin/reports",

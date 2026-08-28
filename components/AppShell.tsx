@@ -97,6 +97,12 @@ export function AppShell({
       icon: "calendar",
     },
     {
+      href: "/day",
+      label: "Ma journée",
+      section: "Opérations",
+      icon: "journal",
+    },
+    {
       href: "/controls",
       label: "Historique",
       section: "Opérations",
@@ -124,6 +130,12 @@ export function AppShell({
       label: "Planning hebdo",
       section: "Opérations",
       icon: "calendar",
+    },
+    {
+      href: "/admin/days",
+      label: "Journées",
+      section: "Analyse",
+      icon: "journal",
     },
     {
       href: "/admin/reports",

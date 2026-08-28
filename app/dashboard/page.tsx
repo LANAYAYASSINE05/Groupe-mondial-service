@@ -10,6 +10,7 @@ import {
   IconChart,
   IconClipboard,
   IconHistory,
+  IconJournal,
   IconPlus,
   IconUser,
 } from "@/components/Icons";
@@ -142,6 +143,11 @@ export default function DashboardPage() {
                 href: "/controls/new",
                 label: "Lancer un contrôle",
                 icon: IconClipboard,
+              },
+              {
+                href: "/day",
+                label: "Compte-rendu du jour",
+                icon: IconJournal,
               },
               {
                 href: "/controls",

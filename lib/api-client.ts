@@ -79,6 +79,16 @@ export type PlannedControl = {
   } | null;
 };
 
+export type DayLog = {
+  id: string;
+  userId: string;
+  date: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: Pick<User, "id" | "name" | "email">;
+};
+
 export function planStatusLabel(s: PlanStatus) {
   if (s === "planifie") return "Planifié";
   if (s === "en_cours") return "En cours";
@@ -213,4 +223,30 @@ export function formatDate(iso: string) {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+export function localDateISO(d = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function shiftLocalDate(isoDate: string, days: number) {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return localDateISO(d);
+}
+
+export function formatDayHeading(isoDate: string) {
+  const s = new Date(`${isoDate}T12:00:00`).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function formatLocalDate(isoDate: string) {
+  const [y, m, d] = isoDate.split("-");
+  if (!y || !m || !d) return isoDate;
+  return `${d}/${m}/${y}`;
 }
