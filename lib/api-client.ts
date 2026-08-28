@@ -250,3 +250,31 @@ export function formatLocalDate(isoDate: string) {
   if (!y || !m || !d) return isoDate;
   return `${d}/${m}/${y}`;
 }
+
+export function currentMonthISO(d = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+export function shiftMonth(month: string, delta: number) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return currentMonthISO(d);
+}
+
+export function monthLabel(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString("fr-FR", {
+    month: "long",
+    year: "numeric",
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function mondayOfDate(isoDate: string) {
+  const d = new Date(`${isoDate}T12:00:00`);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return localDateISO(d);
+}

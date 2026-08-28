@@ -621,6 +621,9 @@ export const initialControls: Control[] = [
 function buildInitialPlans(): PlannedControl[] {
   const thisWeek = mondayOfWeek();
   const lastWeek = shiftMonday(thisWeek, -1);
+  const twoWeeksAgo = shiftMonday(thisWeek, -2);
+  const threeWeeksAgo = shiftMonday(thisWeek, -3);
+  const nextWeek = shiftMonday(thisWeek, 1);
   const day = (weekStart: string, offset: number, hour: number) => {
     const d = new Date(`${weekStart}T00:00:00`);
     d.setDate(d.getDate() + offset);
@@ -696,6 +699,14 @@ function buildInitialPlans(): PlannedControl[] {
     mk(15, 1, lastWeek, 1, "termine", [IDS.amine], "Entrepôt Nord", cid(13)),
     mk(16, 3, lastWeek, 3, "termine", [IDS.sara], "Clinique", cid(15)),
     mk(17, 11, lastWeek, 5, "non_effectue", [IDS.karim], "Usine — agent absent"),
+    mk(18, 0, twoWeeksAgo, 1, "termine", [IDS.amine], "Tour Horizon — ronde"),
+    mk(19, 6, twoWeeksAgo, 3, "termine", [IDS.amine], "Aéroport — passager"),
+    mk(20, 8, twoWeeksAgo, 4, "planifie", [IDS.sara], "Campus Hassan II"),
+    mk(21, 3, threeWeeksAgo, 2, "termine", [IDS.sara], "Clinique Atlas — audit"),
+    mk(22, 10, threeWeeksAgo, 5, "non_effectue", [IDS.karim], "Tanger Med reporté"),
+    mk(23, 4, nextWeek, 0, "planifie", [IDS.karim], "Marina — ouverture mois"),
+    mk(24, 2, nextWeek, 1, "planifie", [IDS.sara], "Siège — suivi"),
+    mk(25, 1, nextWeek, 2, "planifie", [IDS.amine], "Entrepôt Nord"),
   ];
 }
 

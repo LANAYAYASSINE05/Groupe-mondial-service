@@ -127,7 +127,7 @@ export function AppShell({
     },
     {
       href: "/admin/planning",
-      label: "Planning hebdo",
+      label: "Planning",
       section: "Opérations",
       icon: "calendar",
     },

@@ -420,7 +420,7 @@ export default function AdminDashboardPage() {
                 },
                 {
                   href: "/admin/planning",
-                  label: "Planning hebdomadaire",
+                  label: "Planning mensuel",
                   icon: IconCalendar,
                 },
                 {

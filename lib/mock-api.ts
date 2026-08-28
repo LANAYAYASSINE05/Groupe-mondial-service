@@ -1,4 +1,4 @@
-import { ApiError, getToken, localDateISO, type ChecklistDef, type Control, type DayLog, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
+import { ApiError, currentMonthISO, getToken, localDateISO, monthLabel, type ChecklistDef, type Control, type DayLog, type FormType, type PlannedControl, type PlanStatus, type User } from "@/lib/api-client";
 import { CHECKLISTS } from "./mock/checklists";
 import {
   daysAgo,
@@ -209,12 +209,43 @@ function buildReports(s: MockStore, controls: Control[]) {
   };
 }
 
-function buildWeekPayload(s: MockStore, weekStart: string) {
+function scopePlans(plans: PlannedControl[], user: User) {
+  if (user.role === "admin") return plans;
+  return plans.filter((p) => p.assignees.some((a) => a.id === user.id));
+}
+
+function planKpis(plans: PlannedControl[]) {
+  return {
+    total: plans.length,
+    planifie: plans.filter((p) => p.status === "planifie").length,
+    enCours: plans.filter((p) => p.status === "en_cours").length,
+    termine: plans.filter((p) => p.status === "termine").length,
+    nonEffectue: plans.filter((p) => p.status === "non_effectue").length,
+  };
+}
+
+function buildMonthPayload(s: MockStore, month: string, user: User) {
+  const plans = scopePlans(
+    s.plans.filter((p) => localDateISO(new Date(p.plannedAt)).startsWith(month)),
+    user
+  ).sort((a, b) => a.plannedAt.localeCompare(b.plannedAt));
+  return {
+    month,
+    label: monthLabel(month),
+    plans,
+    kpis: planKpis(plans),
+  };
+}
+
+function buildWeekPayload(s: MockStore, weekStart: string, user: User) {
   const ws = new Date(`${weekStart}T12:00:00`);
   const we = new Date(ws);
   we.setDate(we.getDate() + 6);
   const dayLabels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-  const plans = s.plans.filter((p) => p.weekStart === weekStart);
+  const plans = scopePlans(
+    s.plans.filter((p) => p.weekStart === weekStart),
+    user
+  );
 
   const rowMap = new Map<string, {
     establishmentId: string;
@@ -242,13 +273,7 @@ function buildWeekPayload(s: MockStore, weekStart: string) {
     }
   }
 
-  const kpis = {
-    total: plans.length,
-    planifie: plans.filter((p) => p.status === "planifie").length,
-    enCours: plans.filter((p) => p.status === "en_cours").length,
-    termine: plans.filter((p) => p.status === "termine").length,
-    nonEffectue: plans.filter((p) => p.status === "non_effectue").length,
-  };
+  const kpis = planKpis(plans);
 
   return {
     weekStart,
@@ -523,9 +548,15 @@ export async function mockApi<T>(
   }
 
   // Planning
+  if (pathname === "/api/planning/month" && method === "GET") {
+    const month = params.get("month") || currentMonthISO();
+    return buildMonthPayload(s, month, user) as T;
+  }
+
   if (pathname === "/api/planning/week" && method === "GET") {
-    const weekStart = params.get("weekStart") || mondayOfWeek();
-    return buildWeekPayload(s, weekStart) as T;
+    const weekStart =
+      params.get("week") || params.get("weekStart") || mondayOfWeek();
+    return buildWeekPayload(s, weekStart, user) as T;
   }
 
   if (pathname === "/api/planning/history" && method === "GET") {

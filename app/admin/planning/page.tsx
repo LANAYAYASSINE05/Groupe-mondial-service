@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { FieldLabel, Input, Select, Textarea } from "@/components/Field";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
+import { MonthBoard, PlanningViewToggle } from "@/components/MonthBoard";
 import {
   WeekBoard,
   formatPlanHours,
@@ -15,8 +16,13 @@ import {
 import {
   api,
   ApiError,
+  currentMonthISO,
   formatDate,
+  localDateISO,
+  mondayOfDate,
+  monthLabel,
   planStatusLabel,
+  shiftMonth,
   type Establishment,
   type PlannedControl,
   type PlanStatus,
@@ -49,6 +55,13 @@ type SiteHistory = {
     user: { id: string; name: string; email: string };
     ref: string;
   }[];
+};
+
+type MonthPayload = {
+  month: string;
+  label: string;
+  plans: PlannedControl[];
+  kpis: WeekPayload["kpis"];
 };
 
 const STATUSES: PlanStatus[] = [
@@ -175,6 +188,10 @@ function ControllerMultiSelect({
 
 export default function AdminPlanningPage() {
   const { push } = useToast();
+  const [view, setView] = useState<"month" | "week">("month");
+  const [month, setMonth] = useState(currentMonthISO);
+  const [selectedDate, setSelectedDate] = useState(localDateISO);
+  const [monthData, setMonthData] = useState<MonthPayload | null>(null);
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [week, setWeek] = useState<WeekPayload | null>(null);
   const [sites, setSites] = useState<Establishment[]>([]);
@@ -202,33 +219,72 @@ export default function AdminPlanningPage() {
     []
   );
 
+  const loadMonth = useCallback(async (m?: string) => {
+    const key = m || currentMonthISO();
+    const data = await api<MonthPayload>(
+      `/api/planning/month?month=${encodeURIComponent(key)}`
+    );
+    setMonthData(data);
+    setMonth(data.month);
+    return data;
+  }, []);
+
+  async function refreshBoards() {
+    await Promise.all([
+      loadMonth(month),
+      loadWeek(weekStart ?? undefined),
+    ]);
+  }
+
+  function selectDay(iso: string) {
+    const nextMonth = iso.slice(0, 7);
+    if (nextMonth !== month) void loadMonth(nextMonth);
+    setSelectedDate(iso);
+    setPlannedFromLocal(`${iso}T09:00`);
+    setPlannedUntilLocal(`${iso}T11:00`);
+  }
+
+  function goMonth(delta: number) {
+    const next = shiftMonth(month, delta);
+    const today = localDateISO();
+    setSelectedDate(today.startsWith(next) ? today : `${next}-01`);
+    void loadMonth(next);
+  }
+
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        const [w, est, users] = await Promise.all([
-          loadWeek(),
+        const [, est, users] = await Promise.all([
+          loadMonth(),
           api<{ establishments: Establishment[] }>(
             "/api/admin/establishments"
           ),
           api<{ users: User[] }>("/api/admin/users"),
         ]);
+        if (cancelled) return;
         setSites(est.establishments.filter((s) => s.active));
         setControllers(
           users.users.filter((u) => u.role === "controleur" && u.active)
         );
-        if (!plannedFromLocal) {
+        setPlannedFromLocal((prev) => {
+          if (prev) return prev;
           const from = nowLocalInputValue();
-          setPlannedFromLocal(from);
           setPlannedUntilLocal(defaultUntilLocalInputValue(from));
-        }
+          return from;
+        });
       } catch (err) {
+        if (cancelled) return;
         push(
           err instanceof ApiError ? err.message : "Chargement impossible.",
           "error"
         );
       }
     })();
-  }, [loadWeek, plannedFromLocal, push]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loadMonth, push]);
 
   async function refreshHistory(siteId: string) {
     if (!siteId) {
@@ -278,7 +334,7 @@ export default function AdminPlanningPage() {
       });
       push("Contrôle planifié.");
       setNotes("");
-      await loadWeek(weekStart ?? undefined);
+      await refreshBoards();
       if (historySiteId === establishmentId) {
         await refreshHistory(establishmentId);
       }
@@ -299,7 +355,7 @@ export default function AdminPlanningPage() {
         body: JSON.stringify({ status }),
       });
       push("État mis à jour.");
-      await loadWeek(weekStart ?? undefined);
+      await refreshBoards();
     } catch (err) {
       push(
         err instanceof ApiError ? err.message : "Mise à jour impossible.",
@@ -317,7 +373,7 @@ export default function AdminPlanningPage() {
         body: JSON.stringify({ controlId: id }),
       });
       push("Rapport lié.");
-      await loadWeek(weekStart ?? undefined);
+      await refreshBoards();
     } catch (err) {
       push(
         err instanceof ApiError ? err.message : "Liaison impossible.",
@@ -331,7 +387,7 @@ export default function AdminPlanningPage() {
     try {
       await api(`/api/planning/${planId}`, { method: "DELETE" });
       push("Planification supprimée.");
-      await loadWeek(weekStart ?? undefined);
+      await refreshBoards();
     } catch (err) {
       push(
         err instanceof ApiError ? err.message : "Suppression impossible.",
@@ -340,69 +396,238 @@ export default function AdminPlanningPage() {
     }
   }
 
+  const kpis = view === "month" ? monthData?.kpis : week?.kpis;
   const weekLabel = useMemo(() => {
     if (!week) return "";
     return `${week.weekStart} → ${week.weekEnd}`;
   }, [week]);
 
+  function renderPlan(plan: PlannedControl) {
+    return (
+      <article className="border border-line bg-surface/40 p-3">
+        <button
+          type="button"
+          className="min-w-0 w-full text-left"
+          onClick={() => {
+            setHistorySiteId(plan.establishmentId);
+            void refreshHistory(plan.establishmentId);
+          }}
+        >
+          <p className="truncate font-medium text-mist">
+            {plan.establishment.name}
+          </p>
+          {plan.clientName ? (
+            <p className="truncate text-[0.7rem] text-mute">
+              {plan.clientName}
+            </p>
+          ) : null}
+          <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
+            {formatPlanHours(plan)}
+          </p>
+        </button>
+        <p className="mt-1.5 truncate text-xs text-mute">
+          {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ") || "—"}
+        </p>
+        <select
+          className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${statusTone(plan.status)}`}
+          value={plan.status}
+          onChange={(e) =>
+            updateStatus(plan.id, e.target.value as PlanStatus)
+          }
+          aria-label="État du contrôle"
+        >
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {planStatusLabel(s)}
+            </option>
+          ))}
+        </select>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {plan.control ? (
+            <Link
+              href={`/controls/${plan.control.id}`}
+              className="text-xs text-gold hover:underline"
+            >
+              Rapport
+            </Link>
+          ) : (
+            <form
+              className="flex min-w-0 flex-1 gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                void linkControl(plan.id, String(fd.get("ref") || ""));
+                e.currentTarget.reset();
+              }}
+            >
+              <input
+                name="ref"
+                placeholder="UUID"
+                className="gms-field min-h-8 flex-1 px-2 py-1 text-[0.65rem]"
+                aria-label="Référence rapport"
+              />
+              <button
+                type="submit"
+                className="shrink-0 text-xs text-gold hover:underline"
+              >
+                Lier
+              </button>
+            </form>
+          )}
+          <button
+            type="button"
+            className="ml-auto text-xs text-mute hover:text-brand"
+            onClick={() => void removePlan(plan.id)}
+          >
+            Suppr.
+          </button>
+        </div>
+      </article>
+    );
+  }
+
   return (
-    <AppShell requireAdmin title="Planning hebdomadaire">
+    <AppShell requireAdmin title="Planning mensuel">
       <div className="space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="gms-eyebrow">Opérations</p>
             <h1 className="mt-2 font-display text-xl font-semibold text-mist sm:text-2xl">
-              Planification des contrôles hebdomadaires
+              Planification des contrôles
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-mute">
-              Programmez les sites à contrôler, affectez les contrôleurs et
-              suivez l’état semaine par semaine.
+              Programmez les sites à contrôler sur le mois, affectez les
+              contrôleurs et suivez l’état jour par jour.
             </p>
           </div>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <Button
-              type="button"
-              variant="ghost"
-              className="min-h-10 flex-1 sm:flex-none"
-              onClick={() =>
-                weekStart && loadWeek(shiftWeek(weekStart, -7)).catch(() => {})
+          <PlanningViewToggle
+            value={view}
+            onChange={(v) => {
+              if (v === "week") {
+                void loadWeek(mondayOfDate(selectedDate));
               }
-            >
-              ← Préc.
-            </Button>
-            <span className="order-first w-full rounded border border-line px-3 py-2 text-center font-display text-[0.65rem] uppercase tracking-[0.12em] text-gold sm:order-none sm:w-auto">
-              {weekLabel || "…"}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              className="min-h-10 flex-1 sm:flex-none"
-              onClick={() =>
-                weekStart && loadWeek(shiftWeek(weekStart, 7)).catch(() => {})
-              }
-            >
-              Suiv. →
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="min-h-10 w-full sm:w-auto"
-              onClick={() => loadWeek().catch(() => {})}
-            >
-              Aujourd’hui
-            </Button>
-          </div>
+              setView(v);
+            }}
+          />
         </div>
 
-        {week ? (
+        <div className="flex w-full flex-wrap items-center gap-2">
+          {view === "month" ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 flex-1 sm:flex-none"
+                onClick={() => goMonth(-1)}
+              >
+                ← Préc.
+              </Button>
+              <span className="order-first w-full rounded border border-line px-3 py-2 text-center font-display text-[0.65rem] uppercase tracking-[0.12em] text-gold sm:order-none sm:w-auto">
+                {monthData?.label || monthLabel(month)}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 flex-1 sm:flex-none"
+                onClick={() => goMonth(1)}
+              >
+                Suiv. →
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 w-full sm:w-auto"
+                onClick={() => {
+                  setSelectedDate(localDateISO());
+                  void loadMonth(currentMonthISO());
+                }}
+              >
+                Ce mois
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 flex-1 sm:flex-none"
+                onClick={() =>
+                  weekStart &&
+                  loadWeek(shiftWeek(weekStart, -7)).catch(() => {})
+                }
+              >
+                ← Préc.
+              </Button>
+              <span className="order-first w-full rounded border border-line px-3 py-2 text-center font-display text-[0.65rem] uppercase tracking-[0.12em] text-gold sm:order-none sm:w-auto">
+                {weekLabel || "…"}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 flex-1 sm:flex-none"
+                onClick={() =>
+                  weekStart && loadWeek(shiftWeek(weekStart, 7)).catch(() => {})
+                }
+              >
+                Suiv. →
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 w-full sm:w-auto"
+                onClick={() => loadWeek().catch(() => {})}
+              >
+                Aujourd’hui
+              </Button>
+            </>
+          )}
+        </div>
+
+        {kpis ? (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <KpiTile label="Total" value={week.kpis.total} />
-            <KpiTile label="Planifiés" value={week.kpis.planifie} />
-            <KpiTile label="En cours" value={week.kpis.enCours} />
-            <KpiTile label="Terminés" value={week.kpis.termine} />
-            <KpiTile label="Non effectués" value={week.kpis.nonEffectue} />
+            <KpiTile label="Total" value={kpis.total} />
+            <KpiTile label="Planifiés" value={kpis.planifie} />
+            <KpiTile label="En cours" value={kpis.enCours} />
+            <KpiTile label="Terminés" value={kpis.termine} />
+            <KpiTile label="Non effectués" value={kpis.nonEffectue} />
           </div>
         ) : null}
+
+        {view === "month" ? (
+          <DashPanel title="Planning du mois">
+            {!monthData ? (
+              <p className="px-4 py-8 text-center text-sm text-mute">
+                Chargement…
+              </p>
+            ) : (
+              <MonthBoard
+                month={monthData.month}
+                plans={monthData.plans}
+                selectedDate={selectedDate}
+                onSelectDate={selectDay}
+                emptyLabel="Aucun créneau ce jour. Cliquez pour planifier."
+              >
+                {renderPlan}
+              </MonthBoard>
+            )}
+          </DashPanel>
+        ) : (
+          <DashPanel title="Planning de la semaine">
+            {!week ? (
+              <p className="px-4 py-8 text-center text-sm text-mute">
+                Chargement…
+              </p>
+            ) : (
+              <WeekBoard
+                weekStart={week.weekStart}
+                dayLabels={week.dayLabels}
+                plans={week.plans}
+              >
+                {renderPlan}
+              </WeekBoard>
+            )}
+          </DashPanel>
+        )}
 
         <DashPanel title="Nouveau créneau">
           <form
@@ -468,7 +693,8 @@ export default function AdminPlanningPage() {
                 onChange={(e) => setPlannedUntilLocal(e.target.value)}
               />
               <p className="mt-1.5 text-xs text-mute">
-                Période prévue du contrôle (début → fin).
+                Période prévue du contrôle (début → fin). Cliquez un jour du
+                calendrier pour le préremplir.
               </p>
             </div>
             <div>
@@ -495,101 +721,6 @@ export default function AdminPlanningPage() {
               </Button>
             </div>
           </form>
-        </DashPanel>
-
-        <DashPanel title="Planning de la semaine">
-          {!week ? (
-            <p className="px-4 py-8 text-center text-sm text-mute">Chargement…</p>
-          ) : (
-            <WeekBoard
-              weekStart={week.weekStart}
-              dayLabels={week.dayLabels}
-              plans={week.plans}
-            >
-              {(plan) => (
-                <article className="border border-line bg-surface/40 p-3">
-                  <button
-                    type="button"
-                    className="min-w-0 w-full text-left"
-                    onClick={() => {
-                      setHistorySiteId(plan.establishmentId);
-                      void refreshHistory(plan.establishmentId);
-                    }}
-                  >
-                    <p className="truncate font-medium text-mist">
-                      {plan.establishment.name}
-                    </p>
-                    {plan.clientName ? (
-                      <p className="truncate text-[0.7rem] text-mute">
-                        {plan.clientName}
-                      </p>
-                    ) : null}
-                    <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
-                      {formatPlanHours(plan)}
-                    </p>
-                  </button>
-                  <p className="mt-1.5 truncate text-xs text-mute">
-                    {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ") ||
-                      "—"}
-                  </p>
-                  <select
-                    className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${statusTone(plan.status)}`}
-                    value={plan.status}
-                    onChange={(e) =>
-                      updateStatus(plan.id, e.target.value as PlanStatus)
-                    }
-                    aria-label="État du contrôle"
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {planStatusLabel(s)}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {plan.control ? (
-                      <Link
-                        href={`/controls/${plan.control.id}`}
-                        className="text-xs text-gold hover:underline"
-                      >
-                        Rapport
-                      </Link>
-                    ) : (
-                      <form
-                        className="flex min-w-0 flex-1 gap-1.5"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const fd = new FormData(e.currentTarget);
-                          void linkControl(plan.id, String(fd.get("ref") || ""));
-                          e.currentTarget.reset();
-                        }}
-                      >
-                        <input
-                          name="ref"
-                          placeholder="UUID"
-                          className="gms-field min-h-8 flex-1 px-2 py-1 text-[0.65rem]"
-                          aria-label="Référence rapport"
-                        />
-                        <button
-                          type="submit"
-                          className="shrink-0 text-xs text-gold hover:underline"
-                        >
-                          Lier
-                        </button>
-                      </form>
-                    )}
-                    <button
-                      type="button"
-                      className="ml-auto text-xs text-mute hover:text-brand"
-                      onClick={() => void removePlan(plan.id)}
-                    >
-                      Suppr.
-                    </button>
-                  </div>
-                </article>
-              )}
-            </WeekBoard>
-          )}
         </DashPanel>
 
         <DashPanel title="Historique par site">
