@@ -74,19 +74,19 @@ function PlanCard({ p }: { p: PlannedControl }) {
         >
           {planStatusLabel(p.status)}
         </span>
-        {p.status !== "termine" && p.status !== "non_effectue" ? (
+        {p.status !== "non_effectue" && !p.controlId ? (
           <Link
-            href="/controls/new"
-            className="text-xs text-gold hover:underline"
+            href={`/controls/new?planId=${encodeURIComponent(p.id)}`}
+            className="text-xs font-medium text-gold hover:underline"
           >
-            Faire le contrôle
+            Reporter le contrôle
           </Link>
         ) : p.controlId ? (
           <Link
             href={`/controls/${p.controlId}`}
             className="text-xs text-gold hover:underline"
           >
-            Voir rapport
+            Voir le rapport
           </Link>
         ) : null}
       </div>

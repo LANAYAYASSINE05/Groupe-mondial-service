@@ -214,6 +214,49 @@ function scopePlans(plans: PlannedControl[], user: User) {
   return plans.filter((p) => p.assignees.some((a) => a.id === user.id));
 }
 
+function canAccessPlan(plan: PlannedControl, user: User) {
+  return user.role === "admin" || plan.assignees.some((a) => a.id === user.id);
+}
+
+function attachControlToPlan(
+  plan: PlannedControl,
+  control: Control
+): PlannedControl {
+  return {
+    ...plan,
+    controlId: control.id,
+    status: "termine",
+    updatedAt: new Date().toISOString(),
+    control: {
+      id: control.id,
+      formType: control.formType,
+      anomaly: control.anomaly,
+      createdAt: control.createdAt,
+      userName: control.user?.name || "",
+    },
+  };
+}
+
+function findOpenPlanForSite(
+  s: MockStore,
+  user: User,
+  establishmentId: string
+) {
+  const today = localDateISO();
+  const open = s.plans.filter(
+    (p) =>
+      p.establishmentId === establishmentId &&
+      !p.controlId &&
+      p.status !== "non_effectue" &&
+      canAccessPlan(p, user)
+  );
+  const sameDay = open.filter(
+    (p) => localDateISO(new Date(p.plannedAt)) === today
+  );
+  const pool = sameDay.length ? sameDay : open;
+  return [...pool].sort((a, b) => a.plannedAt.localeCompare(b.plannedAt))[0];
+}
+
 function planKpis(plans: PlannedControl[]) {
   return {
     total: plans.length,
@@ -490,6 +533,30 @@ export async function mockApi<T>(
       items,
     };
     s.controls.unshift(control);
+
+    const requestedPlanId =
+      typeof body.planId === "string" ? body.planId.trim() : "";
+    let planToLink: PlannedControl | undefined;
+    if (requestedPlanId) {
+      planToLink = s.plans.find((p) => p.id === requestedPlanId);
+      if (!planToLink) throw new ApiError("Créneau planifié introuvable.", 404);
+      if (!canAccessPlan(planToLink, user)) {
+        throw new ApiError("Accès refusé.", 403);
+      }
+      if (planToLink.establishmentId !== est.id) {
+        throw new ApiError(
+          "Le rapport doit concerner l’établissement planifié.",
+          400
+        );
+      }
+    } else {
+      planToLink = findOpenPlanForSite(s, user, est.id);
+    }
+    if (planToLink) {
+      const idx = s.plans.findIndex((p) => p.id === planToLink!.id);
+      if (idx >= 0) s.plans[idx] = attachControlToPlan(planToLink, control);
+    }
+
     return { control: { id: control.id } } as T;
   }
 
@@ -621,21 +688,46 @@ export async function mockApi<T>(
 
   const planMatch = pathname.match(/^\/api\/planning\/([^/]+)$/);
   if (planMatch) {
-    if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
     const id = planMatch[1];
     const idx = s.plans.findIndex((p) => p.id === id);
     if (idx < 0) throw new ApiError("Plan introuvable.", 404);
+    const current = s.plans[idx];
+    if (!canAccessPlan(current, user)) {
+      throw new ApiError("Accès refusé.", 403);
+    }
+    if (method === "GET") {
+      return { plan: current } as T;
+    }
+    if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
     if (method === "PUT" || method === "PATCH") {
-      const p = s.plans[idx];
-      s.plans[idx] = {
-        ...p,
+      let next: PlannedControl = {
+        ...current,
         ...(body.status != null ? { status: body.status as PlanStatus } : {}),
         ...(body.notes != null ? { notes: String(body.notes) } : {}),
         ...(body.plannedAt != null ? { plannedAt: String(body.plannedAt) } : {}),
-        ...(body.plannedUntil != null ? { plannedUntil: String(body.plannedUntil) } : {}),
+        ...(body.plannedUntil != null
+          ? { plannedUntil: String(body.plannedUntil) }
+          : {}),
         updatedAt: new Date().toISOString(),
       };
-      return { plan: s.plans[idx] } as T;
+      if (body.controlId !== undefined) {
+        const raw = body.controlId == null ? "" : String(body.controlId).trim();
+        if (!raw) {
+          next = { ...next, controlId: null, control: null };
+        } else {
+          const ctrl = s.controls.find((c) => c.id === raw);
+          if (!ctrl) throw new ApiError("Rapport introuvable.", 400);
+          if (ctrl.establishmentId !== current.establishmentId) {
+            throw new ApiError(
+              "Le rapport ne correspond pas à cet établissement.",
+              400
+            );
+          }
+          next = attachControlToPlan(next, ctrl);
+        }
+      }
+      s.plans[idx] = next;
+      return { plan: next } as T;
     }
     if (method === "DELETE") {
       s.plans.splice(idx, 1);

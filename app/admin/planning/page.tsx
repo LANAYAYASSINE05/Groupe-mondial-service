@@ -444,12 +444,21 @@ export default function AdminPlanningPage() {
         </select>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {plan.control ? (
-            <Link
-              href={`/controls/${plan.control.id}`}
-              className="text-xs text-gold hover:underline"
-            >
-              Rapport
-            </Link>
+            <div className="w-full border border-gold/30 bg-gold/5 px-2 py-2">
+              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em] text-gold">
+                Reportation
+              </p>
+              <p className="mt-0.5 text-xs text-mist">
+                {plan.control.userName || "Contrôleur"}
+                {plan.control.anomaly ? " · anomalie" : " · conforme"}
+              </p>
+              <Link
+                href={`/controls/${plan.control.id}`}
+                className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
+              >
+                Ouvrir le rapport
+              </Link>
+            </div>
           ) : (
             <form
               className="flex min-w-0 flex-1 gap-1.5"
@@ -774,6 +783,18 @@ export default function AdminPlanningPage() {
                           <p className="mt-1 text-xs text-mute">
                             {p.assignees.map((a) => a.name).join(", ")}
                           </p>
+                          {p.control ? (
+                            <Link
+                              href={`/controls/${p.control.id}`}
+                              className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
+                            >
+                              Voir la reportation
+                            </Link>
+                          ) : (
+                            <p className="mt-1 text-xs text-mute">
+                              En attente de reportation
+                            </p>
+                          )}
                         </li>
                       ))
                     )}

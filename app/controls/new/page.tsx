@@ -1,11 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { IconPassager, IconShield } from "@/components/Icons";
-import { formTypeLabel, type FormType } from "@/lib/api-client";
+import {
+  api,
+  formTypeLabel,
+  formatDate,
+  type FormType,
+  type PlannedControl,
+} from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
 
 const OPTIONS: {
@@ -41,10 +47,28 @@ const OPTIONS: {
   },
 ];
 
-export default function NewControlChoicePage() {
+function NewControlChoiceInner() {
   const router = useRouter();
+  const search = useSearchParams();
   const { push } = useToast();
+  const planId = search.get("planId") || "";
   const [formType, setFormType] = useState<FormType | "">("");
+  const [plan, setPlan] = useState<PlannedControl | null>(null);
+
+  useEffect(() => {
+    if (!planId) {
+      setPlan(null);
+      return;
+    }
+    api<{ plan: PlannedControl }>(`/api/planning/${planId}`)
+      .then((d) => setPlan(d.plan))
+      .catch((err) => {
+        push(
+          err instanceof Error ? err.message : "Créneau introuvable.",
+          "error"
+        );
+      });
+  }, [planId, push]);
 
   function onContinue(e: FormEvent) {
     e.preventDefault();
@@ -52,7 +76,8 @@ export default function NewControlChoicePage() {
       push("Choisissez Audit ou Passager pour continuer.", "error");
       return;
     }
-    router.push(`/controls/new/${formType}`);
+    const q = planId ? `?planId=${encodeURIComponent(planId)}` : "";
+    router.push(`/controls/new/${formType}${q}`);
   }
 
   return (
@@ -62,10 +87,25 @@ export default function NewControlChoicePage() {
         <h2 className="mt-2 font-display text-xl font-semibold tracking-tight text-mist sm:text-3xl">
           Quel contrôle effectuez-vous ?
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-mute">
-          Sélectionnez le formulaire adapté à votre visite. Ce choix est
-          obligatoire avant d&apos;ouvrir la checklist.
-        </p>
+        {plan ? (
+          <div className="mt-4 border border-gold/30 bg-gold/5 px-4 py-3">
+            <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-gold">
+              Reportation du créneau planifié
+            </p>
+            <p className="mt-1 font-medium text-mist">
+              {plan.establishment.name}
+            </p>
+            <p className="text-sm text-mute">
+              {formatDate(plan.plannedAt)}
+              {plan.clientName ? ` · ${plan.clientName}` : ""}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm leading-relaxed text-mute">
+            Sélectionnez le formulaire adapté à votre visite. Ce choix est
+            obligatoire avant d&apos;ouvrir la checklist.
+          </p>
+        )}
 
         <form onSubmit={onContinue} className="mt-10">
           <fieldset>
@@ -170,5 +210,25 @@ export default function NewControlChoicePage() {
         </form>
       </div>
     </AppShell>
+  );
+}
+
+export default function NewControlChoicePage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell title="Nouveau contrôle">
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <div className="gms-pillars" aria-label="Chargement">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </AppShell>
+      }
+    >
+      <NewControlChoiceInner />
+    </Suspense>
   );
 }

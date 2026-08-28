@@ -707,6 +707,15 @@ function buildInitialPlans(): PlannedControl[] {
     mk(23, 4, nextWeek, 0, "planifie", [IDS.karim], "Marina — ouverture mois"),
     mk(24, 2, nextWeek, 1, "planifie", [IDS.sara], "Siège — suivi"),
     mk(25, 1, nextWeek, 2, "planifie", [IDS.amine], "Entrepôt Nord"),
+    mk(
+      26,
+      1,
+      thisWeek,
+      (new Date().getDay() + 6) % 7,
+      "planifie",
+      [IDS.amine],
+      "Créneau du jour — à reporter"
+    ),
   ];
 }
 
