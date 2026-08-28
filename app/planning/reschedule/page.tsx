@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { FieldLabel, Input } from "@/components/Field";
+import { planReportTone } from "@/components/WeekBoard";
 import {
   api,
   ApiError,
@@ -97,8 +98,8 @@ function RescheduleInner() {
         le jour où vous effectuez réellement le contrôle.
       </p>
 
-      <div className="mt-6 border border-gold/30 bg-gold/5 px-4 py-3">
-        <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-gold">
+      <div className={`mt-6 border px-4 py-3 ${planReportTone()}`}>
+        <p className="font-display text-[0.62rem] uppercase tracking-[0.14em]">
           Créneau planifié
         </p>
         <p className="mt-1 font-medium text-mist">{plan.establishment.name}</p>
@@ -107,7 +108,7 @@ function RescheduleInner() {
           {plan.clientName ? ` · ${plan.clientName}` : ""}
         </p>
         {rescheduled && plan.reportedAt ? (
-          <p className="mt-1 text-xs text-gold">
+          <p className="mt-1 text-xs font-medium">
             Déjà reporté au {formatDayHeading(localDateISO(new Date(plan.reportedAt)))}
           </p>
         ) : null}

@@ -11,6 +11,8 @@ import { MonthBoard, PlanningViewToggle } from "@/components/MonthBoard";
 import {
   WeekBoard,
   formatPlanHours,
+  planChipTone,
+  planReportTone,
   planStatusTone,
 } from "@/components/WeekBoard";
 import {
@@ -404,8 +406,15 @@ export default function AdminPlanningPage() {
   }, [week]);
 
   function renderPlan(plan: PlannedControl) {
+    const rescheduled = isPlanRescheduled(plan) && !plan.controlId;
     return (
-      <article className="border border-line bg-surface/40 p-3">
+      <article
+        className={`border p-3 ${
+          rescheduled
+            ? "border-report/45 bg-report/10 shadow-[inset_3px_0_0_0_#C2780A]"
+            : "border-line bg-surface/40"
+        }`}
+      >
         <button
           type="button"
           className="min-w-0 w-full text-left"
@@ -430,7 +439,9 @@ export default function AdminPlanningPage() {
           {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ") || "—"}
         </p>
         <select
-          className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${statusTone(plan.status)}`}
+          className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${
+            rescheduled ? planChipTone(plan) : statusTone(plan.status)
+          }`}
           value={plan.status}
           onChange={(e) =>
             updateStatus(plan.id, e.target.value as PlanStatus)
@@ -468,14 +479,16 @@ export default function AdminPlanningPage() {
               </Link>
             </div>
           ) : isPlanRescheduled(plan) && plan.reportedAt ? (
-            <div className="w-full border border-gold/30 bg-gold/5 px-2 py-2">
-              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em] text-gold">
+            <div
+              className={`w-full border px-2 py-2 ${planReportTone()}`}
+            >
+              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em]">
                 Reportation
               </p>
               <p className="mt-0.5 text-xs text-mist">
                 Planifié {formatDate(plan.plannedAt)}
               </p>
-              <p className="mt-1 text-[0.65rem] text-mute">
+              <p className="mt-1 text-[0.65rem] font-medium">
                 Reporté au {formatDate(plan.reportedAt)} · en attente de contrôle
               </p>
             </div>
@@ -820,7 +833,9 @@ export default function AdminPlanningPage() {
                               </Link>
                             </>
                           ) : isPlanRescheduled(p) && p.reportedAt ? (
-                            <p className="mt-1 text-xs text-gold">
+                            <p
+                              className={`mt-1 rounded border px-2 py-1 text-xs ${planReportTone()}`}
+                            >
                               Reporté au {formatDate(p.reportedAt)} · en attente
                               de contrôle
                             </p>

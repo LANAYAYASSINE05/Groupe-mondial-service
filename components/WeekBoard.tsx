@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { PlanStatus, PlannedControl } from "@/lib/api-client";
+import { isPlanRescheduled, type PlanStatus, type PlannedControl } from "@/lib/api-client";
+
+export function planReportTone() {
+  return "bg-report/15 text-report border-report/40";
+}
 
 export function planStatusTone(status: PlanStatus) {
   if (status === "termine") return "bg-ok/20 text-ok border-ok/40";
@@ -9,6 +13,12 @@ export function planStatusTone(status: PlanStatus) {
   if (status === "non_effectue")
     return "bg-brand/20 text-brand-light border-brand/40";
   return "bg-surface text-mist border-line";
+}
+
+/** Couleur calendrier / badge — reportation en attente prioritaire. */
+export function planChipTone(plan: PlannedControl) {
+  if (isPlanRescheduled(plan) && !plan.controlId) return planReportTone();
+  return planStatusTone(plan.status);
 }
 
 export function formatPlanHours(plan: PlannedControl) {

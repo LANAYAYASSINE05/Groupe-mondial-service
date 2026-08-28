@@ -28,6 +28,7 @@ module.exports = {
         ok: "rgb(61 143 110 / <alpha-value>)",
         audit: "rgb(141 42 38 / <alpha-value>)",
         passager: "rgb(26 111 154 / <alpha-value>)",
+        report: "rgb(194 120 10 / <alpha-value>)",
         line: "rgb(0 0 0 / 0.08)",
       },
       fontFamily: {

@@ -7,7 +7,7 @@ import {
   localDateISO,
   type PlannedControl,
 } from "@/lib/api-client";
-import { planStatusTone } from "@/components/WeekBoard";
+import { planChipTone } from "@/components/WeekBoard";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -60,10 +60,11 @@ function buildGrid(month: string, plans: PlannedControl[]): GridDay[] {
   return days;
 }
 
-function statusDot(status: PlannedControl["status"]) {
-  if (status === "termine") return "bg-ok";
-  if (status === "en_cours") return "bg-gold";
-  if (status === "non_effectue") return "bg-brand";
+function statusDot(plan: PlannedControl) {
+  if (isPlanRescheduled(plan) && !plan.controlId) return "bg-report";
+  if (plan.status === "termine") return "bg-ok";
+  if (plan.status === "en_cours") return "bg-gold";
+  if (plan.status === "non_effectue") return "bg-brand";
   return "bg-mute";
 }
 
@@ -163,7 +164,7 @@ export function MonthBoard({
                   {day.plans.slice(0, 4).map((p) => (
                     <span
                       key={p.id}
-                      className={`h-1.5 w-1.5 rounded-full ${statusDot(p.status)}`}
+                      className={`h-1.5 w-1.5 rounded-full ${statusDot(p)}`}
                     />
                   ))}
                 </span>
@@ -171,7 +172,7 @@ export function MonthBoard({
                   {day.plans.slice(0, 2).map((p) => (
                     <li
                       key={p.id}
-                      className={`truncate rounded border px-1 py-0.5 text-[0.58rem] leading-tight ${planStatusTone(p.status)}`}
+                      className={`truncate rounded border px-1 py-0.5 text-[0.58rem] leading-tight ${planChipTone(p)}`}
                     >
                       {p.establishment.name}
                     </li>
