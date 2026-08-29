@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { DashPanel, DashTable, KpiTile, ControlCards } from "@/components/DashWidgets";
-import { FormTypeBadge } from "@/components/FormTypeBadge";
-import { DonutChart } from "@/components/DonutChart";
+import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
   ApiError,
   formatDate,
+  formTypeLabel,
   type Control,
 } from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
@@ -47,7 +46,7 @@ export default function StatsPage() {
     <AppShell title="Statistiques">
       <div className="mb-6">
         <p className="gms-eyebrow">Analyse</p>
-        <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">
+        <h2 className="mt-1 font-display text-2xl text-mist">
           Mes statistiques
         </h2>
         <p className="mt-1 text-sm text-mute">
@@ -59,55 +58,12 @@ export default function StatsPage() {
         <p className="text-mute">Chargement…</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <KpiTile label="Total" value={stats.total} />
             <KpiTile label="Anomalies" value={stats.anomalies} tone="alert" />
             <KpiTile label="Taux anomalie" value={`${rate} %`} />
-            <KpiTile label="Audits" value={stats.audit} tone="audit" />
-            <KpiTile label="Passagers" value={stats.passager} tone="passager" />
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <DashPanel title="Conformité">
-              <DonutChart
-                slices={[
-                  {
-                    label: "Conformes",
-                    value: Math.max(0, stats.total - stats.anomalies),
-                    color: "#3d8f6e",
-                  },
-                  {
-                    label: "Anomalies",
-                    value: stats.anomalies,
-                    color: "#D13A34",
-                  },
-                ]}
-                centerValue={
-                  stats.total > 0
-                    ? `${Math.round(((stats.total - stats.anomalies) / stats.total) * 100)} %`
-                    : "—"
-                }
-                centerLabel="conformes"
-              />
-            </DashPanel>
-            <DashPanel title="Type de contrôle">
-              <DonutChart
-                slices={[
-                  {
-                    label: "Audit",
-                    value: stats.audit,
-                    color: "#8D2A26",
-                  },
-                  {
-                    label: "Passager",
-                    value: stats.passager,
-                    color: "#1A6F9A",
-                  },
-                ]}
-                centerValue={String(stats.total)}
-                centerLabel="contrôles"
-              />
-            </DashPanel>
+            <KpiTile label="Audits" value={stats.audit} />
+            <KpiTile label="Passagers" value={stats.passager} />
           </div>
 
           <div className="mt-6">
@@ -119,9 +75,6 @@ export default function StatsPage() {
               ) : (
                 <DashTable
                   columns={["Date", "Site", "Formulaire", "Statut", ""]}
-                  stacked={
-                    <ControlCards controls={stats.recent} linkLabel="Détail" />
-                  }
                 >
                   {stats.recent.map((c) => (
                     <tr
@@ -134,8 +87,8 @@ export default function StatsPage() {
                       <td className="px-4 py-3.5 text-mist">
                         {c.establishment?.name}
                       </td>
-                      <td className="px-4 py-3.5">
-                        <FormTypeBadge formType={c.formType} />
+                      <td className="px-4 py-3.5 text-mute">
+                        {formTypeLabel(c.formType)}
                       </td>
                       <td className="px-4 py-3.5">
                         <StatusBadge tone={c.anomaly ? "alert" : "ok"}>

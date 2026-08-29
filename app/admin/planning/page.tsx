@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { FieldLabel, Input, Select, Textarea } from "@/components/Field";
+import { ControllerMultiSelect } from "@/components/ControllerMultiSelect";
 import { FormTypeBadge } from "@/components/FormTypeBadge";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import { MonthBoard, PlanningViewToggle } from "@/components/MonthBoard";
 import {
   WeekBoard,
   formatPlanHours,
-  planChipTone,
-  planReportTone,
   planStatusTone,
 } from "@/components/WeekBoard";
 import {
@@ -20,7 +19,6 @@ import {
   ApiError,
   currentMonthISO,
   formatDate,
-  isPlanRescheduled,
   localDateISO,
   mondayOfDate,
   monthLabel,
@@ -107,86 +105,6 @@ function fromLocalInputValue(local: string) {
 
 function statusTone(status: PlanStatus) {
   return planStatusTone(status);
-}
-
-function ControllerMultiSelect({
-  users,
-  value,
-  onChange,
-}: {
-  users: User[];
-  value: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const selected = users.filter((u) => value.includes(u.id));
-  const label =
-    selected.length === 0
-      ? "— Sélectionner —"
-      : selected.length === 1
-        ? selected[0].name
-        : `${selected.length} contrôleurs`;
-
-  return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        className="gms-field gms-select flex w-full min-h-11 items-center justify-between gap-2 text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className={selected.length === 0 ? "text-mute" : "text-mist"}>
-          {label}
-        </span>
-        <span className="text-mute">▾</span>
-      </button>
-      {open ? (
-        <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-line bg-[var(--gms-field)] p-2 shadow-lg">
-          {users.map((u) => {
-            const checked = value.includes(u.id);
-            return (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() =>
-                  onChange(
-                    checked
-                      ? value.filter((id) => id !== u.id)
-                      : [...value, u.id]
-                  )
-                }
-                className={`mb-1 flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm last:mb-0 ${
-                  checked
-                    ? "border-gold/40 bg-gold-dim text-mist"
-                    : "border-transparent text-mist hover:bg-black/5"
-                }`}
-              >
-                <span
-                  className={`flex h-4 w-4 items-center justify-center rounded border text-[0.55rem] ${
-                    checked
-                      ? "border-gold bg-gold text-ink"
-                      : "border-line text-transparent"
-                  }`}
-                >
-                  ✓
-                </span>
-                {u.name}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 export default function AdminPlanningPage() {
@@ -406,15 +324,8 @@ export default function AdminPlanningPage() {
   }, [week]);
 
   function renderPlan(plan: PlannedControl) {
-    const rescheduled = isPlanRescheduled(plan) && !plan.controlId;
     return (
-      <article
-        className={`border p-3 ${
-          rescheduled
-            ? "border-report/45 bg-report/10 shadow-[inset_3px_0_0_0_#C2780A]"
-            : "border-line bg-surface/40"
-        }`}
-      >
+      <article className="border border-line bg-surface/40 p-3">
         <button
           type="button"
           className="min-w-0 w-full text-left"
@@ -439,9 +350,7 @@ export default function AdminPlanningPage() {
           {plan.assignees.map((a) => a.name.split(" ")[0]).join(", ") || "—"}
         </p>
         <select
-          className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${
-            rescheduled ? planChipTone(plan) : statusTone(plan.status)
-          }`}
+          className={`mt-2 w-full rounded border px-2 py-1.5 text-[0.65rem] ${statusTone(plan.status)}`}
           value={plan.status}
           onChange={(e) =>
             updateStatus(plan.id, e.target.value as PlanStatus)
@@ -456,42 +365,12 @@ export default function AdminPlanningPage() {
         </select>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {plan.control ? (
-            <div className="w-full border border-gold/30 bg-gold/5 px-2 py-2">
-              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em] text-gold">
-                Contrôle réalisé
-              </p>
-              <p className="mt-0.5 text-xs text-mist">
-                {plan.control.userName || "Contrôleur"}
-                {plan.control.anomaly ? " · anomalie" : " · conforme"}
-              </p>
-              <p className="mt-1 text-[0.65rem] text-mute">
-                Planifié {formatDate(plan.plannedAt)}
-                {isPlanRescheduled(plan) && plan.reportedAt
-                  ? ` · Reporté ${formatDate(plan.reportedAt)}`
-                  : ""}
-                {" · "}Rapport {formatDate(plan.control.createdAt)}
-              </p>
-              <Link
-                href={`/controls/${plan.control.id}`}
-                className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
-              >
-                Ouvrir le rapport
-              </Link>
-            </div>
-          ) : isPlanRescheduled(plan) && plan.reportedAt ? (
-            <div
-              className={`w-full border px-2 py-2 ${planReportTone()}`}
+            <Link
+              href={`/controls/${plan.control.id}`}
+              className="text-xs text-gold hover:underline"
             >
-              <p className="font-display text-[0.58rem] uppercase tracking-[0.12em]">
-                Reportation
-              </p>
-              <p className="mt-0.5 text-xs text-mist">
-                Planifié {formatDate(plan.plannedAt)}
-              </p>
-              <p className="mt-1 text-[0.65rem] font-medium">
-                Reporté au {formatDate(plan.reportedAt)} · en attente de contrôle
-              </p>
-            </div>
+              Rapport
+            </Link>
           ) : (
             <form
               className="flex min-w-0 flex-1 gap-1.5"
@@ -816,34 +695,6 @@ export default function AdminPlanningPage() {
                           <p className="mt-1 text-xs text-mute">
                             {p.assignees.map((a) => a.name).join(", ")}
                           </p>
-                          {p.control ? (
-                            <>
-                              <p className="mt-1 text-[0.65rem] text-mute">
-                                Planifié {formatDate(p.plannedAt)}
-                                {isPlanRescheduled(p) && p.reportedAt
-                                  ? ` · Reporté ${formatDate(p.reportedAt)}`
-                                  : ""}
-                                {" · "}Rapport {formatDate(p.control.createdAt)}
-                              </p>
-                              <Link
-                                href={`/controls/${p.control.id}`}
-                                className="mt-1 inline-block text-xs font-medium text-gold hover:underline"
-                              >
-                                Voir le rapport
-                              </Link>
-                            </>
-                          ) : isPlanRescheduled(p) && p.reportedAt ? (
-                            <p
-                              className={`mt-1 rounded border px-2 py-1 text-xs ${planReportTone()}`}
-                            >
-                              Reporté au {formatDate(p.reportedAt)} · en attente
-                              de contrôle
-                            </p>
-                          ) : (
-                            <p className="mt-1 text-xs text-mute">
-                              En attente
-                            </p>
-                          )}
                         </li>
                       ))
                     )}

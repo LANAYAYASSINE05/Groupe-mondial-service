@@ -11,13 +11,13 @@ export default function ProfilePage() {
     <AppShell title="Profil">
       <div className="mb-6">
         <p className="gms-eyebrow">Compte</p>
-        <h2 className="mt-1 font-display text-xl text-mist sm:text-2xl">Mon profil</h2>
+        <h2 className="mt-1 font-display text-2xl text-mist">Mon profil</h2>
       </div>
 
       {user && (
         <div className="space-y-4">
           <DashPanel title="Identité">
-            <DashTable columns={["Champ", "Valeur"]} minWidth="0">
+            <DashTable columns={["Champ", "Valeur"]}>
               <tr className="border-b border-line">
                 <td className="px-4 py-3 text-mute">Nom</td>
                 <td className="px-4 py-3 text-mist">{user.name}</td>

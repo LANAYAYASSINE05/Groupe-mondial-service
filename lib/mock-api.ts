@@ -869,11 +869,14 @@ export async function mockApi<T>(
     return { logs: logs.map(enrichDayLog) } as T;
   }
 
-  // CSV export stub
+  // Export Excel (mock — données filtrées du store)
   if (pathname.startsWith("/api/reports/export") && method === "GET") {
-    const blob = new Blob(["\uFEFFDémo — export CSV indisponible en mode mock\r\n"], {
-      type: "text/csv;charset=utf-8",
-    });
+    if (user.role !== "admin") throw new ApiError("Accès refusé.", 403);
+    const controls = filterControls(s, params);
+    const report = buildReports(s, controls);
+    const view = params.get("view") === "global" ? "global" : "detail";
+    const { buildMockExportXlsx } = await import("./mock/export-xlsx");
+    const blob = await buildMockExportXlsx(report, view);
     return blob as T;
   }
 

@@ -9,16 +9,12 @@ import { MonthBoard, PlanningViewToggle } from "@/components/MonthBoard";
 import {
   WeekBoard,
   formatPlanHours,
-  planChipTone,
-  planReportTone,
   planStatusTone,
 } from "@/components/WeekBoard";
 import {
   api,
   ApiError,
   currentMonthISO,
-  effectivePlanDate,
-  isPlanRescheduled,
   localDateISO,
   mondayOfDate,
   monthLabel,
@@ -61,28 +57,9 @@ function statusTone(status: PlanStatus) {
 }
 
 function PlanCard({ p }: { p: PlannedControl }) {
-  const today = localDateISO();
-  const effective = effectivePlanDate(p);
-  const rescheduled = isPlanRescheduled(p);
-  const canDoControl = !p.controlId && p.status !== "non_effectue" && effective === today;
-  const canReschedule = !p.controlId && p.status !== "non_effectue";
-
   return (
-    <article
-      className={`border p-3 ${
-        rescheduled && !p.controlId
-          ? "border-report/45 bg-report/10 shadow-[inset_3px_0_0_0_#C2780A]"
-          : "border-line bg-surface/40"
-      }`}
-    >
+    <article className="border border-line bg-surface/40 p-3">
       <div className="min-w-0">
-        {rescheduled && !p.controlId ? (
-          <span
-            className={`mb-1.5 inline-block rounded border px-2 py-0.5 font-display text-[0.58rem] uppercase tracking-[0.12em] ${planReportTone()}`}
-          >
-            Reportation
-          </span>
-        ) : null}
         <p className="truncate font-medium text-mist">{p.establishment.name}</p>
         {p.clientName ? (
           <p className="truncate text-[0.7rem] text-mute">{p.clientName}</p>
@@ -90,56 +67,26 @@ function PlanCard({ p }: { p: PlannedControl }) {
         <p className="mt-0.5 font-display text-[0.7rem] tabular-nums text-mist">
           {formatPlanHours(p)}
         </p>
-        {rescheduled && p.reportedAt ? (
-          <p className="mt-1 text-[0.65rem] font-medium text-report">
-            Reporté au{" "}
-            {new Date(p.reportedAt).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-            })}
-          </p>
-        ) : null}
-        {canReschedule && !canDoControl && effective !== today ? (
-          <p className="mt-1 text-[0.65rem] text-mute">
-            Checklist le{" "}
-            {new Date(`${effective}T12:00:00`).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-            })}
-          </p>
-        ) : null}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span
-          className={`rounded border px-2 py-0.5 text-[0.65rem] uppercase tracking-wide ${
-            rescheduled && !p.controlId ? planChipTone(p) : statusTone(p.status)
-          }`}
+          className={`rounded border px-2 py-0.5 text-[0.65rem] uppercase tracking-wide ${statusTone(p.status)}`}
         >
-          {rescheduled && !p.controlId
-            ? "Reporté"
-            : planStatusLabel(p.status)}
+          {planStatusLabel(p.status)}
         </span>
-        {canReschedule ? (
+        {p.status !== "termine" && p.status !== "non_effectue" ? (
           <Link
-            href={`/planning/reschedule?planId=${encodeURIComponent(p.id)}`}
-            className="text-xs font-medium text-mute hover:text-mist hover:underline"
+            href="/controls/new"
+            className="text-xs text-gold hover:underline"
           >
-            Reporter à une autre date
-          </Link>
-        ) : null}
-        {canDoControl ? (
-          <Link
-            href={`/controls/new?planId=${encodeURIComponent(p.id)}`}
-            className="text-xs font-medium text-gold hover:underline"
-          >
-            Effectuer le contrôle
+            Faire le contrôle
           </Link>
         ) : p.controlId ? (
           <Link
             href={`/controls/${p.controlId}`}
             className="text-xs text-gold hover:underline"
           >
-            Voir le rapport
+            Voir rapport
           </Link>
         ) : null}
       </div>

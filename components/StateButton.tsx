@@ -30,7 +30,7 @@ export function StateButton({ value, label, active, onSelect }: Props) {
       aria-label={label}
       aria-pressed={active}
       onClick={onSelect}
-      className={`inline-flex h-11 min-w-[3rem] items-center justify-center rounded-md border px-3 font-display text-[0.7rem] font-semibold uppercase tracking-[0.14em] transition duration-brand sm:h-8 sm:min-w-[2.6rem] sm:px-2.5 sm:text-[0.68rem] ${styles}`}
+      className={`inline-flex h-8 min-w-[2.6rem] items-center justify-center rounded-md border px-2.5 font-display text-[0.68rem] font-semibold uppercase tracking-[0.14em] transition duration-brand ${styles}`}
     >
       {SHORT[value]}
     </button>

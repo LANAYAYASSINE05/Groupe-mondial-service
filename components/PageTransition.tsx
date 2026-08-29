@@ -1,13 +1,28 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import gsap from "gsap";
 
 export function PageTransition({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  return (
-    <div key={pathname} className="gms-page-enter">
-      {children}
-    </div>
-  );
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    if (reduced) {
+      gsap.set(ref.current, { opacity: 1, y: 0 });
+      return;
+    }
+    gsap.fromTo(
+      ref.current,
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.28, ease: "power2.out" }
+    );
+  }, [pathname]);
+
+  return <div ref={ref}>{children}</div>;
 }

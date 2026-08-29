@@ -42,6 +42,8 @@ npm run dev
 
 Les modifications (CRUD admin, planning) fonctionnent **en mémoire** et disparaissent au rechargement de la page.
 
+**Synchronisé avec** `frontend/` (rapports regroupés, pagination, export Excel pro, planning).
+
 ## Structure
 
 ```

@@ -7,9 +7,12 @@ import { Button } from "@/components/Button";
 import { FieldLabel, Input, Select } from "@/components/Field";
 import {
   FormTypeBadge,
+  ReportTableGroupToggle,
   TableViewToggle,
+  type ReportTableGroup,
 } from "@/components/FormTypeBadge";
-import { DashPanel, DashTable, KpiTile, PageToolbar } from "@/components/DashWidgets";
+import { DashPanel, KpiTile } from "@/components/DashWidgets";
+import { PaginatedDashTable } from "@/components/PaginatedDashTable";
 import { IconSearch } from "@/components/Icons";
 import {
   api,
@@ -119,6 +122,7 @@ export default function AdminReportsPage() {
   const [draft, setDraft] = useState<FilterState>(emptyFilters);
   const [applied, setApplied] = useState<FilterState>(emptyFilters);
   const [tableView, setTableView] = useState<"global" | "detail">("global");
+  const [tableGroup, setTableGroup] = useState<ReportTableGroup>("site");
   const [sites, setSites] = useState<Establishment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
@@ -127,11 +131,20 @@ export default function AdminReportsPage() {
 
   const filtersPending = !filtersEqual(draft, applied);
 
-  const exportQueryString = useCallback(() => {
-    const base = filtersToQuery(applied);
-    const join = base ? "&" : "?";
-    return `${base}${join}view=${tableView}`;
-  }, [applied, tableView]);
+  const paginationResetKey = useMemo(
+    () =>
+      `${tableGroup}-${tableView}-${applied.from}-${applied.to}-${applied.establishmentId}-${applied.userId}-${applied.formType}-${applied.anomaly}`,
+    [tableGroup, tableView, applied]
+  );
+
+  const exportQueryString = useCallback(
+    (view: "global" | "detail") => {
+      const base = filtersToQuery(applied);
+      const join = base ? "&" : "?";
+      return `${base}${join}view=${view}`;
+    },
+    [applied]
+  );
 
   const runSearch = useCallback(
     async (filters: FilterState) => {
@@ -197,7 +210,7 @@ export default function AdminReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function downloadExport(format: "csv" | "xlsx") {
+  async function downloadExport(view: "global" | "detail") {
     if (filtersPending) {
       push("Cliquez sur Rechercher pour appliquer les filtres avant l'export.", "error");
       return;
@@ -206,34 +219,25 @@ export default function AdminReportsPage() {
       push("Aucune donnée à exporter.", "error");
       return;
     }
+    const stamp = new Date().toISOString().slice(0, 10);
+    const label = view === "global" ? "globale" : "détail";
     try {
-      let blob: Blob;
-      if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
-        blob = await api<Blob>(
-          `/api/reports/export.${format}${exportQueryString()}`
-        );
-      } else {
-        const token = getToken();
-        const res = await fetch(
-          `${getApiBaseUrl()}/api/reports/export.${format}${exportQueryString()}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
-        if (!res.ok) throw new Error("Export impossible.");
-        blob = await res.blob();
-      }
+      const token = getToken();
+      const res = await fetch(
+        `${getApiBaseUrl()}/api/reports/export.xlsx${exportQueryString(view)}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+      if (!res.ok) throw new Error("Export impossible.");
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `gms-rapports-${tableView}.${format}`;
+      a.download = `gms-rapports-${view}-${stamp}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      push(
-        format === "xlsx"
-          ? `Export Excel (${tableView === "global" ? "globale" : "détail"}) téléchargé.`
-          : `Export CSV (${tableView === "global" ? "globale" : "détail"}) téléchargé.`
-      );
+      push(`Export Excel (${label}) téléchargé.`);
     } catch {
       push("Export impossible.", "error");
     }
@@ -241,37 +245,42 @@ export default function AdminReportsPage() {
 
   return (
     <AppShell requireAdmin title="Rapports">
-      <PageToolbar
-        eyebrow="Administration"
-        title="Synthèse des contrôles"
-      >
-        <Button
-          variant="secondary"
-          className="min-h-11 w-full sm:w-auto"
-          disabled={filtersPending || !report}
-          onClick={() => downloadExport("csv")}
-          title={
-            filtersPending
-              ? "Appliquez les filtres avec Rechercher"
-              : undefined
-          }
-        >
-          Export CSV ({tableView === "global" ? "globale" : "détail"})
-        </Button>
-        <Button
-          variant="secondary"
-          className="min-h-11 w-full sm:w-auto"
-          disabled={filtersPending || !report}
-          onClick={() => downloadExport("xlsx")}
-          title={
-            filtersPending
-              ? "Appliquez les filtres avec Rechercher"
-              : undefined
-          }
-        >
-          Export Excel ({tableView === "global" ? "globale" : "détail"})
-        </Button>
-      </PageToolbar>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="gms-eyebrow">Administration</p>
+          <h2 className="mt-1 font-display text-2xl text-mist">
+            Synthèse des contrôles
+          </h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            className="min-h-11"
+            disabled={filtersPending || !report}
+            onClick={() => downloadExport("global")}
+            title={
+              filtersPending
+                ? "Appliquez les filtres avec Rechercher"
+                : "Classeur Excel — un onglet par tableau"
+            }
+          >
+            Export Excel (globale)
+          </Button>
+          <Button
+            variant="secondary"
+            className="min-h-11"
+            disabled={filtersPending || !report}
+            onClick={() => downloadExport("detail")}
+            title={
+              filtersPending
+                ? "Appliquez les filtres avec Rechercher"
+                : "Classeur Excel — un onglet par tableau"
+            }
+          >
+            Export Excel (détail)
+          </Button>
+        </div>
+      </div>
 
       <DashPanel title="Filtres">
         <form onSubmit={onSearch} className="p-4 sm:p-5">
@@ -371,7 +380,7 @@ export default function AdminReportsPage() {
               </p>
             ) : (
               <p className="text-xs text-mute">
-                Les exports CSV et Excel utilisent ces filtres appliqués.
+                Les exports Excel utilisent ces filtres appliqués.
               </p>
             )}
           </div>
@@ -380,22 +389,15 @@ export default function AdminReportsPage() {
 
       {report && (
         <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-mute">
-              Affichage des tableaux par item et par contrôle.
-            </p>
-            <TableViewToggle value={tableView} onChange={setTableView} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiTile label="Total" value={report.kpis.total} />
             <KpiTile
               label="Anomalies"
               value={report.kpis.anomalies}
               tone="alert"
             />
-        <KpiTile label="Audits" value={report.kpis.audit} tone="audit" />
-            <KpiTile label="Passagers" value={report.kpis.passager} tone="passager" />
+            <KpiTile label="Audits" value={report.kpis.audit} />
+            <KpiTile label="Passagers" value={report.kpis.passager} />
           </div>
 
           {report.kpis.unvisitedSites.length > 0 && (
@@ -406,10 +408,22 @@ export default function AdminReportsPage() {
             </DashPanel>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <DashPanel title="Par site">
-              {tableView === "global" ? (
-                <DashTable
+          <DashPanel
+            title="Tableaux"
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <ReportTableGroupToggle
+                  value={tableGroup}
+                  onChange={setTableGroup}
+                />
+                <TableViewToggle value={tableView} onChange={setTableView} />
+              </div>
+            }
+          >
+            {tableGroup === "site" &&
+              (tableView === "global" ? (
+                <PaginatedDashTable
+                  resetKey={`site-global-${paginationResetKey}`}
                   columns={[
                     "Site",
                     "Audit",
@@ -417,12 +431,10 @@ export default function AdminReportsPage() {
                     "Total",
                     "Anomalies",
                   ]}
-                >
-                  {report.summaries.bySite.map((s) => (
-                    <tr
-                      key={s.establishmentId}
-                      className="border-b border-line"
-                    >
+                  items={report.summaries.bySite}
+                  getRowKey={(s) => s.establishmentId}
+                  renderRow={(s) => (
+                    <>
                       <td className="px-4 py-3 text-mist">{s.name}</td>
                       <td className="px-4 py-3 tabular-nums text-mute">
                         {s.audit}
@@ -436,19 +448,23 @@ export default function AdminReportsPage() {
                       <td className="px-4 py-3 tabular-nums text-mute">
                         {s.anomalies}
                       </td>
-                    </tr>
-                  ))}
-                </DashTable>
+                    </>
+                  )}
+                />
               ) : (
-                <DashTable
+                <PaginatedDashTable
+                  resetKey={`site-detail-${paginationResetKey}`}
                   columns={["Date", "Site", "Type", "Contrôleur", "Statut"]}
-                >
-                  {report.controls.map((c) => (
-                    <tr key={c.id} className="border-b border-line">
+                  items={report.controls}
+                  getRowKey={(c) => c.id}
+                  renderRow={(c) => (
+                    <>
                       <td className="px-4 py-3 text-mute">
                         {formatDate(c.createdAt)}
                       </td>
-                      <td className="px-4 py-3 text-mist">{c.establishment?.name}</td>
+                      <td className="px-4 py-3 text-mist">
+                        {c.establishment?.name}
+                      </td>
                       <td className="px-4 py-3">
                         <FormTypeBadge formType={c.formType} />
                       </td>
@@ -460,15 +476,15 @@ export default function AdminReportsPage() {
                           <span className="text-ok">OK</span>
                         )}
                       </td>
-                    </tr>
-                  ))}
-                </DashTable>
-              )}
-            </DashPanel>
+                    </>
+                  )}
+                />
+              ))}
 
-            <DashPanel title="Par contrôleur">
-              {tableView === "global" ? (
-                <DashTable
+            {tableGroup === "controller" &&
+              (tableView === "global" ? (
+                <PaginatedDashTable
+                  resetKey={`ctrl-global-${paginationResetKey}`}
                   columns={[
                     "Contrôleur",
                     "Audit",
@@ -476,9 +492,10 @@ export default function AdminReportsPage() {
                     "Total",
                     "Anomalies",
                   ]}
-                >
-                  {report.summaries.byController.map((c) => (
-                    <tr key={c.userId} className="border-b border-line">
+                  items={report.summaries.byController}
+                  getRowKey={(c) => c.userId}
+                  renderRow={(c) => (
+                    <>
                       <td className="px-4 py-3 text-mist">{c.name}</td>
                       <td className="px-4 py-3 tabular-nums text-mute">
                         {c.audit}
@@ -492,15 +509,17 @@ export default function AdminReportsPage() {
                       <td className="px-4 py-3 tabular-nums text-mute">
                         {c.anomalies}
                       </td>
-                    </tr>
-                  ))}
-                </DashTable>
+                    </>
+                  )}
+                />
               ) : (
-                <DashTable
+                <PaginatedDashTable
+                  resetKey={`ctrl-detail-${paginationResetKey}`}
                   columns={["Contrôleur", "Type", "Site", "Date", "Statut"]}
-                >
-                  {report.controls.map((c) => (
-                    <tr key={c.id} className="border-b border-line">
+                  items={report.controls}
+                  getRowKey={(c) => `ctrl-detail-${c.id}`}
+                  renderRow={(c) => (
+                    <>
                       <td className="px-4 py-3 text-mist">{c.user?.name}</td>
                       <td className="px-4 py-3">
                         <FormTypeBadge formType={c.formType} />
@@ -518,174 +537,165 @@ export default function AdminReportsPage() {
                           <span className="text-ok">OK</span>
                         )}
                       </td>
-                    </tr>
-                  ))}
-                </DashTable>
-              )}
-            </DashPanel>
-          </div>
+                    </>
+                  )}
+                />
+              ))}
 
-          <DashPanel
-            title="Par item"
-            action={
-              <span className="font-display text-[0.62rem] uppercase tracking-label text-mute">
-                {tableView === "global" ? "Vue agrégée" : "Ligne par réponse"}
-              </span>
-            }
-          >
-            {tableView === "global" ? (
-              <DashTable
-                columns={[
-                  "Type",
-                  "Point",
-                  "OK",
-                  "Non conforme",
-                  "N/A",
-                ]}
-              >
-                {report.summaries.byItem.map((i) => (
-                  <tr
-                    key={`${i.formType}-${i.itemKey}`}
-                    className="border-b border-line"
-                  >
-                    <td className="px-4 py-3">
-                      <FormTypeBadge formType={i.formType} />
-                    </td>
-                    <td className="px-4 py-3 text-mist">{i.label}</td>
-                    <td className="px-4 py-3 tabular-nums text-ok">{i.ok}</td>
-                    <td className="px-4 py-3 tabular-nums text-brand-light">
-                      {i.no}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-mute">{i.na}</td>
-                  </tr>
-                ))}
-              </DashTable>
-            ) : (
-              <DashTable
-                columns={[
-                  "Date",
-                  "Site",
-                  "Contrôleur",
-                  "Type",
-                  "Point",
-                  "État",
-                  "Commentaire",
-                ]}
-              >
-                {itemDetails.map((row) => (
-                  <tr key={row.key} className="border-b border-line">
-                    <td className="whitespace-nowrap px-4 py-3 text-mute">
-                      {formatDate(row.date)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/controls/${row.controlId}`}
-                        className="text-mist hover:text-brand-light"
+            {tableGroup === "item" &&
+              (tableView === "global" ? (
+                <PaginatedDashTable
+                  resetKey={`item-global-${paginationResetKey}`}
+                  columns={["Type", "Point", "OK", "Non conforme", "N/A"]}
+                  items={report.summaries.byItem}
+                  getRowKey={(i) => `${i.formType}-${i.itemKey}`}
+                  renderRow={(i) => (
+                    <>
+                      <td className="px-4 py-3">
+                        <FormTypeBadge formType={i.formType} />
+                      </td>
+                      <td className="px-4 py-3 text-mist">{i.label}</td>
+                      <td className="px-4 py-3 tabular-nums text-ok">{i.ok}</td>
+                      <td className="px-4 py-3 tabular-nums text-brand-light">
+                        {i.no}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-mute">{i.na}</td>
+                    </>
+                  )}
+                />
+              ) : (
+                <PaginatedDashTable
+                  resetKey={`item-detail-${paginationResetKey}`}
+                  minWidth="48rem"
+                  columns={[
+                    "Date",
+                    "Site",
+                    "Contrôleur",
+                    "Type",
+                    "Point",
+                    "État",
+                    "Commentaire",
+                  ]}
+                  items={itemDetails}
+                  getRowKey={(row) => row.key}
+                  renderRow={(row) => (
+                    <>
+                      <td className="whitespace-nowrap px-4 py-3 text-mute">
+                        {formatDate(row.date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/controls/${row.controlId}`}
+                          className="text-mist hover:text-brand-light"
+                        >
+                          {row.site}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-mute">{row.controller}</td>
+                      <td className="px-4 py-3">
+                        <FormTypeBadge formType={row.formType} />
+                      </td>
+                      <td className="px-4 py-3 text-mist">{row.label}</td>
+                      <td
+                        className={`px-4 py-3 text-xs uppercase tracking-[0.1em] ${
+                          row.state === "ok"
+                            ? "text-ok"
+                            : row.state === "no"
+                              ? "text-brand-light"
+                              : "text-mute"
+                        }`}
                       >
-                        {row.site}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-mute">{row.controller}</td>
-                    <td className="px-4 py-3">
-                      <FormTypeBadge formType={row.formType} />
-                    </td>
-                    <td className="px-4 py-3 text-mist">{row.label}</td>
-                    <td
-                      className={`px-4 py-3 text-xs uppercase tracking-[0.1em] ${
-                        row.state === "ok"
-                          ? "text-ok"
-                          : row.state === "no"
-                            ? "text-brand-light"
-                            : "text-mute"
-                      }`}
-                    >
-                      {stateLabel(row.state as "ok" | "no" | "na")}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-mute">
-                      {row.comment || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </DashTable>
-            )}
-          </DashPanel>
+                        {stateLabel(row.state as "ok" | "no" | "na")}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-mute">
+                        {row.comment || "—"}
+                      </td>
+                    </>
+                  )}
+                />
+              ))}
 
-          <DashPanel title="Liste des contrôles">
-            {tableView === "global" ? (
-              <DashTable
-                columns={["Site", "Type", "Contrôleur", "Date", "Statut"]}
-              >
-                {report.controls.map((c) => (
-                  <tr key={c.id} className="border-b border-line">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/controls/${c.id}`}
-                        className="text-mist hover:text-brand-light"
+            {tableGroup === "list" &&
+              (tableView === "global" ? (
+                <PaginatedDashTable
+                  resetKey={`list-global-${paginationResetKey}`}
+                  columns={["Site", "Type", "Contrôleur", "Date", "Statut"]}
+                  items={report.controls}
+                  getRowKey={(c) => c.id}
+                  renderRow={(c) => (
+                    <>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/controls/${c.id}`}
+                          className="text-mist hover:text-brand-light"
+                        >
+                          {c.establishment?.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <FormTypeBadge formType={c.formType} />
+                      </td>
+                      <td className="px-4 py-3 text-mute">{c.user?.name}</td>
+                      <td className="px-4 py-3 text-mute">
+                        {formatDate(c.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.anomaly ? (
+                          <span className="text-brand-light">Anomalie</span>
+                        ) : (
+                          <span className="text-ok">OK</span>
+                        )}
+                      </td>
+                    </>
+                  )}
+                />
+              ) : (
+                <PaginatedDashTable
+                  resetKey={`list-detail-${paginationResetKey}`}
+                  minWidth="44rem"
+                  columns={[
+                    "Date",
+                    "Site",
+                    "Type",
+                    "Point",
+                    "État",
+                    "Contrôleur",
+                  ]}
+                  items={itemDetails}
+                  getRowKey={(row) => `list-${row.key}`}
+                  renderRow={(row) => (
+                    <>
+                      <td className="whitespace-nowrap px-4 py-3 text-mute">
+                        {formatDate(row.date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/controls/${row.controlId}`}
+                          className="text-mist hover:text-brand-light"
+                        >
+                          {row.site}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <FormTypeBadge formType={row.formType} />
+                      </td>
+                      <td className="px-4 py-3 text-mist">{row.label}</td>
+                      <td
+                        className={`px-4 py-3 text-xs uppercase tracking-[0.1em] ${
+                          row.state === "ok"
+                            ? "text-ok"
+                            : row.state === "no"
+                              ? "text-brand-light"
+                              : "text-mute"
+                        }`}
                       >
-                        {c.establishment?.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <FormTypeBadge formType={c.formType} />
-                    </td>
-                    <td className="px-4 py-3 text-mute">{c.user?.name}</td>
-                    <td className="px-4 py-3 text-mute">
-                      {formatDate(c.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {c.anomaly ? (
-                        <span className="text-brand-light">Anomalie</span>
-                      ) : (
-                        <span className="text-ok">OK</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </DashTable>
-            ) : (
-              <DashTable
-                columns={[
-                  "Date",
-                  "Site",
-                  "Type",
-                  "Point",
-                  "État",
-                  "Contrôleur",
-                ]}
-              >
-                {itemDetails.map((row) => (
-                  <tr key={`ctrl-${row.key}`} className="border-b border-line">
-                    <td className="whitespace-nowrap px-4 py-3 text-mute">
-                      {formatDate(row.date)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/controls/${row.controlId}`}
-                        className="text-mist hover:text-brand-light"
-                      >
-                        {row.site}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <FormTypeBadge formType={row.formType} />
-                    </td>
-                    <td className="px-4 py-3 text-mist">{row.label}</td>
-                    <td
-                      className={`px-4 py-3 text-xs uppercase tracking-[0.1em] ${
-                        row.state === "ok"
-                          ? "text-ok"
-                          : row.state === "no"
-                            ? "text-brand-light"
-                            : "text-mute"
-                      }`}
-                    >
-                      {stateLabel(row.state as "ok" | "no" | "na")}
-                    </td>
-                    <td className="px-4 py-3 text-mute">{row.controller}</td>
-                  </tr>
-                ))}
-              </DashTable>
-            )}
+                        {stateLabel(row.state as "ok" | "no" | "na")}
+                      </td>
+                      <td className="px-4 py-3 text-mute">{row.controller}</td>
+                    </>
+                  )}
+                />
+              ))}
           </DashPanel>
         </div>
       )}

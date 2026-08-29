@@ -135,14 +135,6 @@ export function IconMenu({ className = "h-4 w-4", ...props }: IconProps) {
   );
 }
 
-export function IconClose({ className = "h-4 w-4", ...props }: IconProps) {
-  return (
-    <svg className={`shrink-0 ${className}`} {...defaults} {...props}>
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
-
 export function IconPlus({ className = "h-4 w-4", ...props }: IconProps) {
   return (
     <svg className={`shrink-0 ${className}`} {...defaults} {...props}>

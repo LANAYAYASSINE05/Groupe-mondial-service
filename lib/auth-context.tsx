@@ -34,10 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const data = await api<{ user: User }>("/api/auth/me");
-      if (getToken() !== token) return;
       setUser(data.user);
     } catch {
-      if (getToken() !== token) return;
       setToken(null);
       setUser(null);
     } finally {
@@ -56,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(data.token);
     setUser(data.user);
-    setLoading(false);
   }, []);
 
   const logout = useCallback(() => {

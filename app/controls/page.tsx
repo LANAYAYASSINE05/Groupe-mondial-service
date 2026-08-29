@@ -5,13 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { Select } from "@/components/Field";
-import { DashPanel, DashTable, KpiTile, ControlCards, PageToolbar } from "@/components/DashWidgets";
-import { FormTypeBadge } from "@/components/FormTypeBadge";
+import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   api,
   ApiError,
   formatDate,
+  formTypeLabel,
   type Control,
   type FormType,
 } from "@/lib/api-client";
@@ -43,16 +43,19 @@ export default function MyControlsPage() {
 
   return (
     <AppShell title="Historique">
-      <PageToolbar
-        eyebrow="Opérations"
-        title="Historique des contrôles"
-      >
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="gms-eyebrow">Opérations</p>
+          <h2 className="mt-1 font-display text-2xl text-mist">
+            Historique des contrôles
+          </h2>
+        </div>
         <Link href="/controls/new">
-          <Button className="min-h-11 w-full sm:w-auto">Nouveau contrôle</Button>
+          <Button className="min-h-11">Nouveau contrôle</Button>
         </Link>
-      </PageToolbar>
+      </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <KpiTile label="Total" value={controls.length} />
         <KpiTile label="Anomalies" value={anomalies} tone="alert" />
         <KpiTile
@@ -70,7 +73,7 @@ export default function MyControlsPage() {
             onChange={(e) =>
               setFilter(e.target.value as "all" | FormType | "anomaly")
             }
-            className="min-h-9 w-full max-w-[12rem] border-0 bg-white py-1 text-xs text-ink sm:w-auto"
+            className="min-h-9 w-auto border-0 bg-white py-1 text-xs text-ink"
             aria-label="Filtrer"
           >
             <option value="all">Tous</option>
@@ -87,7 +90,6 @@ export default function MyControlsPage() {
         ) : (
           <DashTable
             columns={["Date", "Établissement", "Formulaire", "Statut", ""]}
-            stacked={<ControlCards controls={filtered} linkLabel="Ouvrir" />}
           >
             {filtered.map((c) => (
               <tr
@@ -100,8 +102,8 @@ export default function MyControlsPage() {
                 <td className="px-4 py-3.5 text-mist">
                   {c.establishment?.name ?? "—"}
                 </td>
-                <td className="px-4 py-3.5">
-                  <FormTypeBadge formType={c.formType} />
+                <td className="px-4 py-3.5 text-mute">
+                  {formTypeLabel(c.formType)}
                 </td>
                 <td className="px-4 py-3.5">
                   <StatusBadge tone={c.anomaly ? "alert" : "ok"}>

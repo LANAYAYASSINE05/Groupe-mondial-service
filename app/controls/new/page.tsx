@@ -1,20 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { IconPassager, IconShield } from "@/components/Icons";
-import {
-  api,
-  effectivePlanDate,
-  formatDayHeading,
-  formTypeLabel,
-  localDateISO,
-  type FormType,
-  type PlannedControl,
-} from "@/lib/api-client";
+import { formTypeLabel, type FormType } from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
 
 const OPTIONS: {
@@ -22,9 +13,6 @@ const OPTIONS: {
   icon: typeof IconShield;
   points: number;
   description: string;
-  selectedClass: string;
-  iconSelectedClass: string;
-  accentClass: string;
 }[] = [
   {
     value: "audit",
@@ -32,10 +20,6 @@ const OPTIONS: {
     points: 22,
     description:
       "Contrôle complet du site — chaque point en Conforme ou Non conforme, avec explication.",
-    selectedClass:
-      "border-audit bg-audit/8 shadow-[inset_3px_0_0_0_#8D2A26]",
-    iconSelectedClass: "border-audit bg-audit text-white",
-    accentClass: "text-audit",
   },
   {
     value: "passager",
@@ -43,54 +27,13 @@ const OPTIONS: {
     points: 7,
     description:
       "Contrôle allégé — 7 points obligatoires + explication en fin de visite.",
-    selectedClass:
-      "border-passager bg-passager/8 shadow-[inset_3px_0_0_0_#1A6F9A]",
-    iconSelectedClass: "border-passager bg-passager text-white",
-    accentClass: "text-passager",
   },
 ];
 
-function NewControlChoiceInner() {
+export default function NewControlChoicePage() {
   const router = useRouter();
-  const search = useSearchParams();
   const { push } = useToast();
-  const planId = search.get("planId") || "";
   const [formType, setFormType] = useState<FormType | "">("");
-  const [plan, setPlan] = useState<PlannedControl | null>(null);
-  const [planBlocked, setPlanBlocked] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!planId) {
-      setPlan(null);
-      setPlanBlocked(null);
-      return;
-    }
-    api<{ plan: PlannedControl }>(`/api/planning/${planId}`)
-      .then((d) => {
-        const p = d.plan;
-        if (p.controlId) {
-          setPlanBlocked("Ce créneau est déjà terminé.");
-          setPlan(p);
-          return;
-        }
-        const effective = effectivePlanDate(p);
-        if (effective !== localDateISO()) {
-          setPlanBlocked(
-            `La checklist n’est disponible que le ${formatDayHeading(effective)}. Utilisez « Reporter à une autre date » si besoin.`
-          );
-          setPlan(p);
-          return;
-        }
-        setPlanBlocked(null);
-        setPlan(p);
-      })
-      .catch((err) => {
-        push(
-          err instanceof Error ? err.message : "Créneau introuvable.",
-          "error"
-        );
-      });
-  }, [planId, push]);
 
   function onContinue(e: FormEvent) {
     e.preventDefault();
@@ -98,52 +41,20 @@ function NewControlChoiceInner() {
       push("Choisissez Audit ou Passager pour continuer.", "error");
       return;
     }
-    const q = planId ? `?planId=${encodeURIComponent(planId)}` : "";
-    router.push(`/controls/new/${formType}${q}`);
+    router.push(`/controls/new/${formType}`);
   }
 
   return (
     <AppShell title="Nouveau contrôle">
       <div className="mx-auto max-w-2xl">
         <p className="gms-eyebrow">Étape 1 · Type</p>
-        <h2 className="mt-2 font-display text-xl font-semibold tracking-tight text-mist sm:text-3xl">
+        <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-mist sm:text-3xl">
           Quel contrôle effectuez-vous ?
         </h2>
-        {plan ? (
-          <div className="mt-4 border border-gold/30 bg-gold/5 px-4 py-3">
-            <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-gold">
-              Créneau du jour
-            </p>
-            <p className="mt-1 font-medium text-mist">
-              {plan.establishment.name}
-            </p>
-            {plan.clientName ? (
-              <p className="text-sm text-mute">{plan.clientName}</p>
-            ) : null}
-            {planBlocked ? (
-              <>
-                <p className="mt-2 text-sm text-brand">{planBlocked}</p>
-                {planId ? (
-                  <Link
-                    href={`/planning/reschedule?planId=${encodeURIComponent(planId)}`}
-                    className="mt-2 inline-block text-sm font-medium text-gold hover:underline"
-                  >
-                    Reporter à une autre date
-                  </Link>
-                ) : null}
-              </>
-            ) : (
-              <p className="mt-1 text-sm text-mute">
-                Choisissez Audit ou Passager pour ouvrir la checklist.
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-2 text-sm leading-relaxed text-mute">
-            Sélectionnez le formulaire adapté à votre visite. Ce choix est
-            obligatoire avant d&apos;ouvrir la checklist.
-          </p>
-        )}
+        <p className="mt-2 text-sm leading-relaxed text-mute">
+          Sélectionnez le formulaire adapté à votre visite. Ce choix est
+          obligatoire avant d&apos;ouvrir la checklist.
+        </p>
 
         <form onSubmit={onContinue} className="mt-10">
           <fieldset>
@@ -153,23 +64,14 @@ function NewControlChoiceInner() {
               aria-label="Type de contrôle"
               className="grid gap-4 sm:grid-cols-2"
             >
-              {OPTIONS.map(
-                ({
-                  value,
-                  icon: Icon,
-                  points,
-                  description,
-                  selectedClass,
-                  iconSelectedClass,
-                  accentClass,
-                }) => {
+              {OPTIONS.map(({ value, icon: Icon, points, description }) => {
                 const selected = formType === value;
                 return (
                   <label
                     key={value}
-                    className={`group relative flex cursor-pointer flex-col border p-5 transition duration-brand sm:p-6 ${
+                    className={`group relative flex cursor-pointer flex-col border p-6 transition duration-brand ${
                       selected
-                        ? selectedClass
+                        ? "border-brand bg-brand/8 shadow-[inset_3px_0_0_0_#D13A34]"
                         : "border-line bg-white hover:border-brand/35 hover:bg-surface/40"
                     }`}
                   >
@@ -185,15 +87,15 @@ function NewControlChoiceInner() {
                       <span
                         className={`flex h-11 w-11 items-center justify-center border ${
                           selected
-                            ? iconSelectedClass
-                            : "border-line bg-surface text-mist"
+                            ? "border-brand bg-brand text-white"
+                            : "border-line bg-surface text-brand"
                         }`}
                       >
                         <Icon className="h-5 w-5" />
                       </span>
                       <span
                         className={`font-display text-[0.62rem] uppercase tracking-[0.14em] ${
-                          selected ? accentClass : "text-mute"
+                          selected ? "text-brand-dark" : "text-mute"
                         }`}
                       >
                         {points} points
@@ -201,7 +103,7 @@ function NewControlChoiceInner() {
                     </div>
                     <p
                       className={`mt-5 font-display text-lg font-semibold ${
-                        selected ? accentClass : "text-mist"
+                        selected ? "text-brand-dark" : "text-mist"
                       }`}
                     >
                       {formTypeLabel(value)}
@@ -211,14 +113,14 @@ function NewControlChoiceInner() {
                     </p>
                     <span
                       className={`mt-5 inline-flex items-center gap-2 font-display text-[0.65rem] uppercase tracking-[0.12em] ${
-                        selected ? accentClass : "text-na group-hover:text-mute"
+                        selected ? "text-brand" : "text-na group-hover:text-mute"
                       }`}
                       aria-hidden
                     >
                       <span
                         className={`h-2 w-2 rounded-full border ${
                           selected
-                            ? `${value === "audit" ? "border-audit bg-audit" : "border-passager bg-passager"}`
+                            ? "border-brand bg-brand"
                             : "border-line bg-white"
                         }`}
                       />
@@ -226,8 +128,7 @@ function NewControlChoiceInner() {
                     </span>
                   </label>
                 );
-              }
-              )}
+              })}
             </div>
           </fieldset>
 
@@ -235,7 +136,7 @@ function NewControlChoiceInner() {
             <Button
               type="submit"
               className="min-h-14 w-full text-base"
-              disabled={!formType || Boolean(planBlocked)}
+              disabled={!formType}
             >
               Continuer vers la checklist
             </Button>
@@ -248,25 +149,5 @@ function NewControlChoiceInner() {
         </form>
       </div>
     </AppShell>
-  );
-}
-
-export default function NewControlChoicePage() {
-  return (
-    <Suspense
-      fallback={
-        <AppShell title="Nouveau contrôle">
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="gms-pillars" aria-label="Chargement">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        </AppShell>
-      }
-    >
-      <NewControlChoiceInner />
-    </Suspense>
   );
 }

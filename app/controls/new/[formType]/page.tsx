@@ -1,24 +1,22 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { FieldLabel, Select, Textarea } from "@/components/Field";
 import { DashPanel, KpiTile } from "@/components/DashWidgets";
 import { ProgressBar } from "@/components/ProgressBar";
 import { StateButton } from "@/components/StateButton";
-import { FormTypeBadge } from "@/components/FormTypeBadge";
 import {
   api,
   ApiError,
-  formatDate,
+  formTypeLabel,
   type ChecklistDef,
   type Establishment,
   type FormType,
   type ItemState,
-  type PlannedControl,
 } from "@/lib/api-client";
 import { GeoCheckbox } from "@/components/ControlsMap";
 import {
@@ -34,37 +32,14 @@ type DraftItem = {
 };
 
 export default function ControlFormPage() {
-  return (
-    <Suspense
-      fallback={
-        <AppShell title="Checklist">
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="gms-pillars" aria-label="Chargement">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        </AppShell>
-      }
-    >
-      <ControlFormInner />
-    </Suspense>
-  );
-}
-
-function ControlFormInner() {
   const params = useParams();
   const formType = params.formType as FormType;
-  const search = useSearchParams();
-  const planId = search.get("planId") || "";
   const router = useRouter();
   const { push } = useToast();
 
   const [checklist, setChecklist] = useState<ChecklistDef | null>(null);
   const [sites, setSites] = useState<Establishment[]>([]);
   const [establishmentId, setEstablishmentId] = useState("");
-  const [plan, setPlan] = useState<PlannedControl | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [explanation, setExplanation] = useState("");
   const [recordGeo, setRecordGeo] = useState(true);
@@ -97,24 +72,6 @@ function ControlFormInner() {
         );
       });
   }, [formType, router, push]);
-
-  useEffect(() => {
-    if (!planId) {
-      setPlan(null);
-      return;
-    }
-    api<{ plan: PlannedControl }>(`/api/planning/${planId}`)
-      .then((d) => {
-        setPlan(d.plan);
-        setEstablishmentId(d.plan.establishmentId);
-      })
-      .catch((err) => {
-        push(
-          err instanceof ApiError ? err.message : "Créneau introuvable.",
-          "error"
-        );
-      });
-  }, [planId, push]);
 
   const progress = useMemo(() => {
     if (!items.length) return 0;
@@ -181,7 +138,6 @@ function ControlFormInner() {
           formType,
           establishmentId,
           explanation,
-          planId: planId || undefined,
           ...geoPayload,
           items: items.map((i) => ({
             itemKey: i.itemKey,
@@ -190,16 +146,8 @@ function ControlFormInner() {
           })),
         }),
       });
-      push(
-        planId
-          ? "Contrôle enregistré et lié au créneau planifié."
-          : "Contrôle enregistré."
-      );
-      router.push(
-        `/controls/new/success?id=${data.control.id}${
-          planId ? `&planId=${encodeURIComponent(planId)}` : ""
-        }`
-      );
+      push("Contrôle enregistré.");
+      router.push(`/controls/new/success?id=${data.control.id}`);
     } catch (err) {
       push(
         err instanceof ApiError ? err.message : "Enregistrement impossible.",
@@ -228,8 +176,8 @@ function ControlFormInner() {
     <AppShell title={checklist.title || "Checklist"}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <FormTypeBadge formType={formType} />
-          <h2 className="mt-2 font-display text-xl text-mist sm:text-2xl">
+          <p className="gms-eyebrow">{formTypeLabel(formType)}</p>
+          <h2 className="mt-1 font-display text-2xl text-mist">
             {checklist.title}
           </h2>
           <p className="mt-1 text-sm text-mute">
@@ -237,14 +185,14 @@ function ControlFormInner() {
           </p>
         </div>
         <Link
-          href={planId ? `/controls/new?planId=${encodeURIComponent(planId)}` : "/controls/new"}
+          href="/controls/new"
           className="text-sm text-mute underline-offset-4 hover:text-mist hover:underline"
         >
           Changer de formulaire
         </Link>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <KpiTile label="Progression" value={`${progress} %`} />
         <KpiTile
           label="Restants"
@@ -259,35 +207,20 @@ function ControlFormInner() {
           <div className="space-y-4 p-4 sm:p-5">
             <div className="max-w-xl">
               <FieldLabel htmlFor="site">Établissement contrôlé *</FieldLabel>
-              {plan ? (
-                <div className="border border-gold/30 bg-gold/5 px-3 py-3">
-                  <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-gold">
-                    Site du créneau planifié
-                  </p>
-                  <p className="mt-1 font-medium text-mist">
-                    {plan.establishment.name}
-                  </p>
-                  <p className="text-xs text-mute">
-                    Planifié le {formatDate(plan.plannedAt)}
-                    {plan.clientName ? ` · ${plan.clientName}` : ""}
-                  </p>
-                </div>
-              ) : (
-                <Select
-                  id="site"
-                  required
-                  value={establishmentId}
-                  onChange={(e) => setEstablishmentId(e.target.value)}
-                  className="min-h-11"
-                >
-                  <option value="">Sélectionner le site…</option>
-                  {sites.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
+              <Select
+                id="site"
+                required
+                value={establishmentId}
+                onChange={(e) => setEstablishmentId(e.target.value)}
+                className="min-h-11"
+              >
+                <option value="">Sélectionner le site…</option>
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
             </div>
             <ProgressBar value={progress} />
           </div>
@@ -380,7 +313,7 @@ function ControlFormInner() {
           </div>
         </DashPanel>
 
-        <div className="sticky bottom-0 z-20 -mx-3 border-t border-line bg-white/95 px-3 py-3 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-0 z-20 -mx-4 border-t border-line bg-white/95 px-4 py-4 backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button
               type="submit"

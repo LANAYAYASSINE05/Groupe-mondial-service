@@ -18,9 +18,7 @@ function SuccessInner() {
           Contrôle enregistré
         </h2>
         <p className="mt-1 text-sm text-mute">
-          {params.get("planId")
-            ? "Le rapport est lié au créneau planifié. L’administrateur le voit dans le planning."
-            : "Le rapport est disponible dans l'historique."}
+          Le rapport est disponible dans l&apos;historique.
         </p>
       </div>
 
@@ -39,21 +37,12 @@ function SuccessInner() {
               Voir le détail
             </Link>
           ) : null}
-          {params.get("planId") ? (
-            <Link
-              href="/planning"
-              className="gms-btn-primary inline-flex min-h-11 items-center justify-center px-5 text-center"
-            >
-              Retour au planning
-            </Link>
-          ) : (
-            <Link
-              href="/controls/new"
-              className="gms-btn-primary inline-flex min-h-11 items-center justify-center px-5 text-center"
-            >
-              Nouveau contrôle
-            </Link>
-          )}
+          <Link
+            href="/controls/new"
+            className="gms-btn-primary inline-flex min-h-11 items-center justify-center px-5 text-center"
+          >
+            Nouveau contrôle
+          </Link>
           <Link
             href="/dashboard"
             className="gms-btn-ghost inline-flex min-h-11 items-center justify-center px-5 text-center"

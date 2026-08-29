@@ -201,7 +201,11 @@ export async function api<T>(
   if (res.status === 204) return undefined as T;
 
   const contentType = res.headers.get("content-type") || "";
-  if (contentType.includes("text/csv")) {
+  if (
+    contentType.includes("text/csv") ||
+    contentType.includes("spreadsheetml") ||
+    contentType.includes("application/zip")
+  ) {
     const blob = await res.blob();
     if (!res.ok) throw new ApiError("Export impossible.", res.status);
     return blob as T;
@@ -221,7 +225,6 @@ export function formTypeLabel(t: FormType) {
   return t === "audit" ? "Audit" : "Passager";
 }
 
-/** Rouge marque = audit · bleu = passager */
 export const FORM_TYPE_HEX: Record<FormType, string> = {
   audit: "#8D2A26",
   passager: "#1A6F9A",

@@ -1,23 +1,16 @@
 import type { FormType } from "@/lib/api-client";
 import { formTypeLabel } from "@/lib/api-client";
 
-export function formTypeBadgeClass(formType: FormType | string) {
-  return formType === "audit"
-    ? "border-audit/30 bg-audit/10 text-audit"
-    : "border-passager/30 bg-passager/10 text-passager";
-}
-
 export function FormTypeBadge({ formType }: { formType: FormType | string }) {
+  const isAudit = formType === "audit";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-display text-[0.62rem] uppercase tracking-[0.12em] ${formTypeBadgeClass(formType)}`}
+      className={`inline-flex rounded px-2 py-0.5 font-display text-[0.62rem] uppercase tracking-[0.12em] ${
+        isAudit
+          ? "bg-gold/15 text-gold"
+          : "bg-brand/15 text-brand-light"
+      }`}
     >
-      <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-          formType === "audit" ? "bg-audit" : "bg-passager"
-        }`}
-        aria-hidden
-      />
       {formTypeLabel(formType as FormType)}
     </span>
   );
@@ -31,11 +24,11 @@ export function TableViewToggle({
   onChange: (v: "global" | "detail") => void;
 }) {
   return (
-    <div className="flex w-full rounded-md border border-line p-0.5 sm:inline-flex sm:w-auto">
+    <div className="inline-flex rounded-md border border-line p-0.5">
       <button
         type="button"
         onClick={() => onChange("global")}
-        className={`min-h-11 flex-1 rounded px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
+        className={`rounded px-3 py-1.5 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors ${
           value === "global"
             ? "bg-brand text-white"
             : "text-mute hover:text-mist"
@@ -46,7 +39,7 @@ export function TableViewToggle({
       <button
         type="button"
         onClick={() => onChange("detail")}
-        className={`min-h-11 flex-1 rounded px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
+        className={`rounded px-3 py-1.5 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors ${
           value === "detail"
             ? "bg-brand text-white"
             : "text-mute hover:text-mist"
@@ -54,6 +47,49 @@ export function TableViewToggle({
       >
         Détail
       </button>
+    </div>
+  );
+}
+
+export type ReportTableGroup = "site" | "controller" | "item" | "list";
+
+const reportTableGroupLabels: Record<ReportTableGroup, string> = {
+  site: "Par site",
+  controller: "Par contrôleur",
+  item: "Par item",
+  list: "Contrôles",
+};
+
+export function ReportTableGroupToggle({
+  value,
+  onChange,
+}: {
+  value: ReportTableGroup;
+  onChange: (v: ReportTableGroup) => void;
+}) {
+  const groups: ReportTableGroup[] = [
+    "site",
+    "controller",
+    "item",
+    "list",
+  ];
+
+  return (
+    <div className="inline-flex max-w-full flex-wrap rounded-md border border-line p-0.5">
+      {groups.map((group) => (
+        <button
+          key={group}
+          type="button"
+          onClick={() => onChange(group)}
+          className={`rounded px-2.5 py-1.5 font-display text-[0.62rem] uppercase tracking-[0.12em] transition-colors sm:px-3 ${
+            value === group
+              ? "bg-brand text-white"
+              : "text-mute hover:text-mist"
+          }`}
+        >
+          {reportTableGroupLabels[group]}
+        </button>
+      ))}
     </div>
   );
 }

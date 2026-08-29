@@ -4,22 +4,30 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
-import { DashPanel, DashTable, KpiTile, ControlCards, PageToolbar } from "@/components/DashWidgets";
+import { DashPanel, DashTable, KpiTile } from "@/components/DashWidgets";
 import { HistogramChart, type HistogramBar } from "@/components/HistogramChart";
-import { DonutChart } from "@/components/DonutChart";
 import { QuickActionList } from "@/components/QuickActionList";
+import {
+  ControlsMap,
+  GeoCheckbox,
+  type MapControlPoint,
+  type MapSite,
+} from "@/components/ControlsMap";
 import {
   IconBuilding,
   IconCalendar,
-  IconReport,
-  IconUsers,
   IconClipboard,
   IconJournal,
-  IconMapPin,
+  IconReport,
+  IconUsers,
 } from "@/components/Icons";
-import { FormTypeBadge } from "@/components/FormTypeBadge";
-import { api, ApiError, formatDate, type Control } from "@/lib/api-client";
-import { useAuth } from "@/lib/auth-context";
+import {
+  api,
+  ApiError,
+  formatDate,
+  formTypeLabel,
+  type Control,
+} from "@/lib/api-client";
 import { useToast } from "@/lib/toast";
 
 type FormBreakdown = {
@@ -103,43 +111,46 @@ export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<ReportKpis | null>(null);
   const [summaries, setSummaries] = useState<ReportSummaries | null>(null);
   const [recent, setRecent] = useState<Control[]>([]);
-  const [gpsCount, setGpsCount] = useState<{ withGps: number; total: number } | null>(
-    null
-  );
+  const [mapSites, setMapSites] = useState<MapSite[]>([]);
+  const [mapControls, setMapControls] = useState<MapControlPoint[]>([]);
+  const [mapStats, setMapStats] = useState<{
+    withGps: number;
+    totalControls: number;
+  } | null>(null);
+  const [geoOnly, setGeoOnly] = useState(false);
   const { push } = useToast();
-  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    api<{
-      kpis: ReportKpis;
-      controls: Control[];
-      summaries: ReportSummaries;
-    }>("/api/reports")
-      .then((report) => {
-        if (cancelled) return;
+    Promise.all([
+      api<{
+        kpis: ReportKpis;
+        controls: Control[];
+        summaries: ReportSummaries;
+      }>("/api/reports"),
+      api<{
+        establishments: MapSite[];
+        controls: MapControlPoint[];
+        stats: { withGps: number; totalControls: number; sitesOnMap: number };
+      }>("/api/reports/map"),
+    ])
+      .then(([report, map]) => {
         setKpis(report.kpis);
         setSummaries(report.summaries);
-        const list = report.controls || [];
-        setRecent(list.slice(0, 8));
-        setGpsCount({
-          withGps: list.filter((c) => c.latitude != null && c.longitude != null)
-            .length,
-          total: list.length,
+        setRecent((report.controls || []).slice(0, 8));
+        setMapSites(map.establishments);
+        setMapControls(map.controls);
+        setMapStats({
+          withGps: map.stats.withGps,
+          totalControls: map.stats.totalControls,
         });
       })
-      .catch((err) => {
-        if (cancelled) return;
+      .catch((err) =>
         push(
           err instanceof ApiError ? err.message : "Chargement impossible.",
           "error"
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, user, push]);
+        )
+      );
+  }, [push]);
 
   const conformiteBars = useMemo<HistogramBar[]>(() => {
     if (!kpis) return [];
@@ -163,135 +174,82 @@ export default function AdminDashboardPage() {
   }, [kpis, summaries]);
 
   const auditBars = useMemo(
-    () => formTypeBars(summaries?.byFormType.audit, "audit"),
+    () => formTypeBars(summaries?.byFormType.audit, "gold"),
     [summaries]
   );
 
   const passagerBars = useMemo(
-    () => formTypeBars(summaries?.byFormType.passager, "passager"),
+    () => formTypeBars(summaries?.byFormType.passager, "default"),
     [summaries]
   );
 
   return (
     <AppShell requireAdmin title="Administration">
-      <PageToolbar
-        eyebrow="Pilotage"
-        title="Tableau de bord admin"
-        description="Vue consolidée des contrôles, sites et anomalies."
-      >
-        <Link href="/admin/map">
-          <Button className="min-h-11 w-full sm:w-auto">
-            <IconMapPin className="h-4 w-4" />
-            Carte
-          </Button>
-        </Link>
-        <Link href="/admin/reports">
-          <Button variant="secondary" className="min-h-11 w-full sm:w-auto">
-            <IconReport className="h-4 w-4" />
-            Rapports
-          </Button>
-        </Link>
-        <Link href="/admin/users">
-          <Button variant="ghost" className="min-h-11 w-full sm:w-auto">
-            <IconUsers className="h-4 w-4" />
-            Comptes
-          </Button>
-        </Link>
-      </PageToolbar>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="gms-eyebrow">Pilotage</p>
+          <h2 className="mt-1 font-display text-2xl text-mist">
+            Tableau de bord admin
+          </h2>
+          <p className="mt-1 text-sm text-mute">
+            Vue consolidée des contrôles, sites et anomalies.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/reports">
+            <Button className="min-h-11">
+              <IconReport className="h-4 w-4" />
+              Rapports
+            </Button>
+          </Link>
+          <Link href="/admin/users">
+            <Button variant="secondary" className="min-h-11">
+              <IconUsers className="h-4 w-4" />
+              Comptes
+            </Button>
+          </Link>
+          <Link href="/admin/establishments">
+            <Button variant="ghost" className="min-h-11">
+              <IconBuilding className="h-4 w-4" />
+              Sites
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiTile label="Contrôles" value={kpis?.total ?? "—"} />
         <KpiTile
           label="Anomalies"
           value={kpis?.anomalies ?? "—"}
           tone="alert"
         />
-        <KpiTile label="Audits" value={kpis?.audit ?? "—"} tone="audit" />
-        <KpiTile label="Passagers" value={kpis?.passager ?? "—"} tone="passager" />
+        <KpiTile label="Audits" value={kpis?.audit ?? "—"} />
+        <KpiTile label="Passagers" value={kpis?.passager ?? "—"} />
         <KpiTile
           label="Avec GPS"
           value={
-            gpsCount ? `${gpsCount.withGps} / ${gpsCount.total}` : "—"
+            mapStats ? `${mapStats.withGps} / ${mapStats.totalControls}` : "—"
           }
         />
       </div>
 
       <div className="mt-6">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="gms-eyebrow">Statistiques</p>
-            <h3 className="mt-1 font-display text-lg text-mist">
-              Répartition circulaire
-            </h3>
-            <p className="mt-1 text-sm text-mute">
-              Vue globale conformité, types de contrôle et anomalies.
-            </p>
+        <DashPanel title="Carte des contrôles">
+          <div className="space-y-4 p-4 sm:p-5">
+            <GeoCheckbox
+              checked={geoOnly}
+              onChange={setGeoOnly}
+              label="Afficher uniquement les contrôles géolocalisés"
+              hint="Décochez pour inclure aussi les points positionnés sur le site (sans GPS propre au contrôle)."
+            />
+            <ControlsMap
+              sites={mapSites}
+              controls={mapControls}
+              geoOnly={geoOnly}
+            />
           </div>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DashPanel title="Conformité">
-            <DonutChart
-              slices={[
-                {
-                  label: "Conformes",
-                  value: Math.max(0, (kpis?.total ?? 0) - (kpis?.anomalies ?? 0)),
-                  color: "#3d8f6e",
-                },
-                {
-                  label: "Anomalies",
-                  value: kpis?.anomalies ?? 0,
-                  color: "#D13A34",
-                },
-              ]}
-              centerValue={
-                kpis && kpis.total > 0
-                  ? `${Math.round(((kpis.total - kpis.anomalies) / kpis.total) * 100)} %`
-                  : "—"
-              }
-              centerLabel="conformes"
-              emptyLabel="Aucun contrôle enregistré."
-            />
-          </DashPanel>
-          <DashPanel title="Type de contrôle">
-            <DonutChart
-              slices={[
-                {
-                  label: "Audit",
-                  value: kpis?.audit ?? 0,
-                  color: "#8D2A26",
-                },
-                {
-                  label: "Passager",
-                  value: kpis?.passager ?? 0,
-                  color: "#1A6F9A",
-                },
-              ]}
-              centerValue={String(kpis?.total ?? 0)}
-              centerLabel="contrôles"
-              emptyLabel="Aucun contrôle enregistré."
-            />
-          </DashPanel>
-          <DashPanel title="Anomalies">
-            <DonutChart
-              slices={[
-                {
-                  label: "Audit",
-                  value: summaries?.byFormType?.audit?.anomalies ?? 0,
-                  color: "#8D2A26",
-                },
-                {
-                  label: "Passager",
-                  value: summaries?.byFormType?.passager?.anomalies ?? 0,
-                  color: "#1A6F9A",
-                },
-              ]}
-              centerValue={String(kpis?.anomalies ?? 0)}
-              centerLabel="écarts"
-              emptyLabel="Aucune anomalie."
-            />
-          </DashPanel>
-        </div>
+        </DashPanel>
       </div>
 
       <div className="mt-6">
@@ -361,13 +319,6 @@ export default function AdminDashboardPage() {
           ) : (
             <DashTable
               columns={["Date", "Site", "Contrôleur", "Type", "GPS", "Anomalie"]}
-              stacked={
-                <ControlCards
-                  controls={recent}
-                  showController
-                  linkLabel="Détail"
-                />
-              }
             >
               {recent.map((c) => (
                 <tr
@@ -386,8 +337,8 @@ export default function AdminDashboardPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-mute">{c.user?.name}</td>
-                  <td className="px-4 py-3">
-                    <FormTypeBadge formType={c.formType} />
+                  <td className="px-4 py-3 text-mute">
+                    {formTypeLabel(c.formType)}
                   </td>
                   <td className="px-4 py-3">
                     {c.latitude != null && c.longitude != null ? (
@@ -413,11 +364,6 @@ export default function AdminDashboardPage() {
           <DashPanel title="Actions rapides">
             <QuickActionList
               actions={[
-                {
-                  href: "/admin/map",
-                  label: "Carte des contrôles",
-                  icon: IconMapPin,
-                },
                 {
                   href: "/admin/planning",
                   label: "Planning mensuel",
